@@ -181,8 +181,13 @@ export function CertificateModal({ cert, shareUrl, onClose, onNameSave }: Certif
       });
       const link = document.createElement("a");
       link.download = `${cert.topic.replace(/\s+/g, "-")}-certificate.png`;
-      link.href = canvas.toDataURL("image/png");
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("Failed to create certificate image.");
+      link.href = URL.createObjectURL(blob);
+      document.body.appendChild(link);
       link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     } catch (e) {
       console.error("Download failed", e);
     } finally {
