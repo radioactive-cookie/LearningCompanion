@@ -244,7 +244,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <Link href="/">
             <div className="flex items-center gap-3 cursor-pointer text-sidebar-foreground group" data-testid="link-home">
               <div className="bg-white p-1.5 rounded-lg border border-border/50 shadow-sm group-hover:shadow transition-shadow">
-                <img src={brandIcon} alt="Companion" className="w-5 h-5 object-contain" />
+                <img src={brandIcon} alt="Companion" className="w-6 h-6 object-contain" />
               </div>
               <span className="font-semibold tracking-tight text-lg">Companion</span>
             </div>

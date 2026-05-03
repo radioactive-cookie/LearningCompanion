@@ -56,7 +56,7 @@ export function Landing() {
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="bg-white p-1.5 rounded-lg border border-border/50 shadow-sm">
-              <img src={brandIcon} alt="Companion" className="w-4 h-4 object-contain" />
+              <img src={brandIcon} alt="Companion" className="w-5 h-5 object-contain" />
             </div>
             <span className="font-semibold text-base tracking-tight text-foreground">Companion</span>
           </div>
