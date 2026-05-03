@@ -17,6 +17,7 @@
     "drizzle-orm": "catalog:",
     "express": "^5",
     "groq-sdk": "^0.9.1",
+    "helmet": "^8.0.0",
     "pino": "^9",
     "pino-http": "^10"
   },
