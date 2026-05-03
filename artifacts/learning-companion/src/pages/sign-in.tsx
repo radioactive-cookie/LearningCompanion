@@ -28,7 +28,7 @@ export function SignIn() {
       <div className="text-center mb-10 relative z-10">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight tracking-tight mb-4"
           style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
-          Think fast,<br />build faster
+          Build projects,<br />learn coding faster
         </h1>
         <p className="text-[#a1a1aa] text-base sm:text-lg font-normal tracking-wide">
           Your AI-powered learning companion
