@@ -198,6 +198,16 @@ router.post("/admin/verify-password", async (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
+// GET /api/admin/accounts — returns admin email list for authenticated users (no adminVerified needed)
+router.get("/admin/accounts", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const rows = await db.select({ email: adminEmailsTable.email }).from(adminEmailsTable).orderBy(adminEmailsTable.createdAt);
+  res.json({ accounts: rows.map((r) => r.email) });
+});
+
 // POST /api/admin/skip-verify — skip password step (only when no password is set)
 router.post("/admin/skip-verify", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) {

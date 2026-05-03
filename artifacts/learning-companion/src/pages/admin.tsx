@@ -100,33 +100,52 @@ function PasswordStep({
   const [setupMode, setSetupMode] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [clickLoading, setClickLoading] = useState(false);
   const [error, setError] = useState("");
   const [checkingSetup, setCheckingSetup] = useState(true);
+  const [accounts, setAccounts] = useState<string[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    async function check() {
-      const res = await apiFetch("/api/admin/verify-password", {
-        method: "POST",
-        body: JSON.stringify({ password: "__probe__" }),
-      });
-      const data = await res.json();
-      if (data.error === "Admin password not configured yet") setSetupMode(true);
+    async function init() {
+      const [probeRes, accountsRes] = await Promise.all([
+        apiFetch("/api/admin/verify-password", {
+          method: "POST",
+          body: JSON.stringify({ password: "__probe__" }),
+        }),
+        apiFetch("/api/admin/accounts"),
+      ]);
+      const probeData = await probeRes.json();
+      if (probeData.error === "Admin password not configured yet") setSetupMode(true);
+      if (accountsRes.ok) {
+        const accountsData = await accountsRes.json();
+        setAccounts(accountsData.accounts ?? []);
+      }
       setCheckingSetup(false);
     }
-    check();
+    init();
   }, []);
+
+  const handleAccountClick = async (accountEmail: string) => {
+    if (accountEmail.toLowerCase() !== email.toLowerCase()) return;
+    setError("");
+    setClickLoading(true);
+    try {
+      const res = await apiFetch("/api/admin/skip-verify", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error); setClickLoading(false); return; }
+      onVerified();
+    } catch {
+      setError("Network error. Try again.");
+      setClickLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (setupMode && password !== confirm) {
-      setError("Passwords do not match");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
+    if (setupMode && password !== confirm) { setError("Passwords do not match"); return; }
+    if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true);
     try {
       if (setupMode) {
@@ -150,94 +169,103 @@ function PasswordStep({
     }
   };
 
-  const handleSkip = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const res = await apiFetch("/api/admin/skip-verify", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error); setLoading(false); return; }
-      onVerified();
-    } catch {
-      setError("Network error. Try again.");
-      setLoading(false);
-    }
-  };
-
   if (checkingSetup) {
     return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 text-white/40 animate-spin" /></div>;
   }
 
+  const isMyAccount = (a: string) => a.toLowerCase() === email.toLowerCase();
+
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-          <span className="text-sm font-semibold text-white">{(displayName[0] || email[0] || "A").toUpperCase()}</span>
+      {/* Admin accounts — click to log in */}
+      {accounts.length > 0 && (
+        <div className="mb-5">
+          <p className="text-xs text-white/40 mb-2.5 flex items-center gap-1.5">
+            <Shield className="w-3 h-3" />
+            Select your admin account to proceed
+          </p>
+          <ul className="space-y-2">
+            {accounts.map((a) => {
+              const mine = isMyAccount(a);
+              return (
+                <li key={a}>
+                  <button
+                    onClick={() => handleAccountClick(a)}
+                    disabled={!mine || clickLoading}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-left ${
+                      mine
+                        ? "bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 cursor-pointer"
+                        : "bg-white/[0.03] border-white/[0.06] opacity-40 cursor-not-allowed"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${mine ? "bg-emerald-500/20 text-emerald-300" : "bg-white/10 text-white/40"}`}>
+                        {a[0].toUpperCase()}
+                      </div>
+                      <span className={`text-sm ${mine ? "text-white" : "text-white/40"}`}>{a}</span>
+                    </div>
+                    {mine && (
+                      clickLoading
+                        ? <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                        : <span className="text-xs text-emerald-400 font-medium">Click to enter →</span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
-        <div>
-          <p className="text-sm font-medium text-white">{displayName}</p>
-          <p className="text-xs text-white/40">{email}</p>
-        </div>
-        <div className="ml-auto flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2.5 py-1">
-          <CheckCircle className="w-3 h-3 text-emerald-400" />
-          <span className="text-xs text-emerald-400">Admin</span>
-        </div>
-      </div>
+      )}
 
-      <div className="flex items-center gap-2 mb-5">
-        <Lock className="w-4 h-4 text-white/40" />
-        <h3 className="text-sm font-medium text-white">
-          {setupMode ? "Set admin password" : "Enter admin password"}
-        </h3>
-      </div>
-      {setupMode && (
-        <p className="text-xs text-amber-400/80 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5 mb-4">
-          No password set yet. Create a secure admin password to protect this panel.
+      {error && (
+        <p className="text-sm text-red-400 flex items-center gap-1.5 mb-3">
+          <AlertTriangle className="w-3.5 h-3.5" />{error}
         </p>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Admin password"
-          autoFocus
-          className="w-full bg-[#1e1e20] border border-white/[0.10] text-white placeholder-[#52525b] text-[15px] rounded-xl px-4 py-3.5 outline-none focus:border-white/25 focus:ring-1 focus:ring-white/10 transition-all"
-        />
-        {setupMode && (
-          <input
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            placeholder="Confirm password"
-            className="w-full bg-[#1e1e20] border border-white/[0.10] text-white placeholder-[#52525b] text-[15px] rounded-xl px-4 py-3.5 outline-none focus:border-white/25 focus:ring-1 focus:ring-white/10 transition-all"
-          />
-        )}
-        {error && (
-          <p className="text-sm text-red-400 flex items-center gap-1.5">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            {error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 bg-white hover:bg-[#f4f4f5] disabled:opacity-50 text-[#09090b] text-[15px] font-semibold rounded-xl px-4 py-3.5 transition-all"
-        >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {setupMode ? "Set password & enter" : "Enter dashboard"}
-        </button>
-      </form>
+      {/* Password fallback */}
+      <button
+        onClick={() => setShowPassword((v) => !v)}
+        className="w-full text-xs text-white/25 hover:text-white/50 transition-colors text-center py-1.5 mb-1"
+      >
+        {showPassword ? "Hide password form ↑" : "Or enter admin password instead ↓"}
+      </button>
 
-      {setupMode && (
-        <button
-          onClick={handleSkip}
-          disabled={loading}
-          className="w-full mt-3 text-xs text-white/30 hover:text-white/60 transition-colors text-center py-2 disabled:opacity-50"
-        >
-          Skip for now — proceed without setting a password →
-        </button>
+      {showPassword && (
+        <>
+          {setupMode && (
+            <p className="text-xs text-amber-400/80 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5 mb-3">
+              No password set yet. Create one to enable password-based login.
+            </p>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Admin password"
+              autoFocus
+              className="w-full bg-[#1e1e20] border border-white/[0.10] text-white placeholder-[#52525b] text-[15px] rounded-xl px-4 py-3.5 outline-none focus:border-white/25 focus:ring-1 focus:ring-white/10 transition-all"
+            />
+            {setupMode && (
+              <input
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Confirm password"
+                className="w-full bg-[#1e1e20] border border-white/[0.10] text-white placeholder-[#52525b] text-[15px] rounded-xl px-4 py-3.5 outline-none focus:border-white/25 focus:ring-1 focus:ring-white/10 transition-all"
+              />
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 bg-white hover:bg-[#f4f4f5] disabled:opacity-50 text-[#09090b] text-[15px] font-semibold rounded-xl px-4 py-3.5 transition-all"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {setupMode ? "Set password & enter" : "Enter dashboard"}
+            </button>
+          </form>
+        </>
       )}
     </div>
   );
