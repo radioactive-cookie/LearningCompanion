@@ -19,6 +19,7 @@ import NotFound from "@/pages/not-found";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { useGetAiUsage, getGetAiUsageQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@workspace/replit-auth-web";
+import { AnimatePresence, motion } from "framer-motion";
 import brandIcon from "@assets/neural-network_1777788855132.png";
 
 // ---------------------------------------------------------------------------
@@ -308,31 +309,49 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Landing} />
-      <Route path="/sign-in" component={SignIn} />
-      <Route path="/admin" component={AdminPage} />
-      <Route path="/chat">
-        <Layout><Chat /></Layout>
-      </Route>
-      <Route path="/history">
-        <Layout><HistoryPage /></Layout>
-      </Route>
-      <Route path="/history/:sessionId">
-        <Layout><Conversation /></Layout>
-      </Route>
-      <Route path="/learn">
-        <Layout><Learn /></Layout>
-      </Route>
-      <Route path="/progress">
-        <Layout><Progress /></Layout>
-      </Route>
-      <Route path="/ide">
-        <Layout><IdePage /></Layout>
-      </Route>
-      <Route path="/certificate/:id" component={CertificatePage} />
-      <Route component={NotFound} />
-    </Switch>
+    <Route>
+      {(routeProps: { location: string }) => {
+        const location = routeProps.location;
+        return (
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location}
+              className="h-full w-full"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <Switch location={location}>
+                <Route path="/" component={Landing} />
+                <Route path="/sign-in" component={SignIn} />
+                <Route path="/admin" component={AdminPage} />
+                <Route path="/chat">
+                  <Layout><Chat /></Layout>
+                </Route>
+                <Route path="/history">
+                  <Layout><HistoryPage /></Layout>
+                </Route>
+                <Route path="/history/:sessionId">
+                  <Layout><Conversation /></Layout>
+                </Route>
+                <Route path="/learn">
+                  <Layout><Learn /></Layout>
+                </Route>
+                <Route path="/progress">
+                  <Layout><Progress /></Layout>
+                </Route>
+                <Route path="/ide">
+                  <Layout><IdePage /></Layout>
+                </Route>
+                <Route path="/certificate/:id" component={CertificatePage} />
+                <Route component={NotFound} />
+              </Switch>
+            </motion.div>
+          </AnimatePresence>
+        );
+      }}
+    </Route>
   );
 }
 

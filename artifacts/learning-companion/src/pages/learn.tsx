@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@workspace/replit-auth-web";
+import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useSearch } from "wouter";
@@ -466,7 +467,15 @@ function LessonView({
               <Skeleton className="h-44 w-full rounded-xl" />
             </div>
           ) : (
-            <>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={`${topic}-${currentLevel}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="flex flex-col gap-5"
+              >
               <Card className="border-border/60">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2 text-primary">
@@ -504,7 +513,8 @@ function LessonView({
                   </CardContent>
                 </Card>
               )}
-            </>
+              </motion.div>
+            </AnimatePresence>
           )}
         </div>
 
@@ -522,17 +532,19 @@ function LessonView({
 
           {!isLoadingLevel && (
             <>
-              <Card className={`border-border/60 ${isCompleted ? "opacity-60" : ""}`}>
-                <CardHeader className="pb-2">
-                  <CardTitle className={`text-sm flex items-center gap-2 ${meta.color}`}>
-                    <Code2 className="w-4 h-4" />
-                    Your Task
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-foreground/90 leading-relaxed">{lesson.task}</p>
-                </CardContent>
-              </Card>
+              <motion.div layout>
+                <Card className={`border-border/60 ${isCompleted ? "opacity-60" : ""}`}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className={`text-sm flex items-center gap-2 ${meta.color}`}>
+                      <Code2 className="w-4 h-4" />
+                      Your Task
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-foreground/90 leading-relaxed">{lesson.task}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
               {lesson.hint && !isCompleted && (
                 <>
@@ -542,16 +554,18 @@ function LessonView({
                       Show hint
                     </Button>
                   ) : (
-                    <Card className="border-amber-200/50 dark:border-amber-800/30 bg-amber-50/50 dark:bg-amber-900/10 animate-in fade-in duration-200">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                          <Lightbulb className="w-4 h-4" />Hint
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-foreground/80 leading-relaxed">{lesson.hint}</p>
-                      </CardContent>
-                    </Card>
+                    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+                      <Card className="border-amber-200/50 dark:border-amber-800/30 bg-amber-50/50 dark:bg-amber-900/10">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                            <Lightbulb className="w-4 h-4" />Hint
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-foreground/80 leading-relaxed">{lesson.hint}</p>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   )}
                 </>
               )}
@@ -699,7 +713,7 @@ export function Learn() {
     if (certIssuedRef.current.has(key)) return;
     certIssuedRef.current.add(key);
     createCertMutation.mutate({
-      data: { language, topic },
+      data: { userId, language, topic },
     });
   }, [userId, createCertMutation]);
 
@@ -712,6 +726,7 @@ export function Learn() {
     if (!userId) return; // requires authentication
     saveProgressMutation.mutate({
       data: {
+        userId,
         language: selectedLanguage.id,
         difficulty: selectedDifficulty,
         topic,

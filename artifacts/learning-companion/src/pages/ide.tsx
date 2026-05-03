@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import Editor from "@monaco-editor/react";
+import { motion } from "framer-motion";
 import { useTheme } from "@/components/theme-provider";
 import {
   Play, Send, RotateCcw, Terminal, Sparkles,
@@ -641,28 +642,34 @@ export function IdePage() {
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" onClick={handleReset} title="Reset to starter code">
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset
-          </Button>
+          <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.99 }}>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8" onClick={handleReset} title="Reset to starter code">
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset
+            </Button>
+          </motion.div>
 
-          <Button
-            variant="outline" size="sm"
-            className={`gap-1.5 text-xs h-8 ${isPreview
-              ? "border-blue-500/40 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
-              : "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
-            }`}
-            onClick={handleRun}
-            disabled={isRunning || !code.trim()}
-          >
-            {isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isPreview ? <Eye className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-            {isRunning ? "Running…" : isPreview ? "Preview" : "Run Code"}
-          </Button>
+          <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.99 }}>
+            <Button
+              variant="outline" size="sm"
+              className={`gap-1.5 text-xs h-8 ${isPreview
+                ? "border-blue-500/40 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+                : "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+              }`}
+              onClick={handleRun}
+              disabled={isRunning || !code.trim()}
+            >
+              {isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isPreview ? <Eye className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              {isRunning ? "Running…" : isPreview ? "Preview" : "Run Code"}
+            </Button>
+          </motion.div>
 
-          <Button size="sm" className="gap-1.5 text-xs h-8" onClick={handleSubmit} disabled={isSubmitting || !code.trim()}>
-            {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-            {isSubmitting ? "Reviewing…" : "AI Review"}
-          </Button>
+          <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.99 }}>
+            <Button size="sm" className="gap-1.5 text-xs h-8" onClick={handleSubmit} disabled={isSubmitting || !code.trim()}>
+              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              {isSubmitting ? "Reviewing…" : "AI Review"}
+            </Button>
+          </motion.div>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { motion } from "framer-motion";
 import {
   Send,
   Sparkles,
@@ -592,16 +593,18 @@ export function Chat() {
                 {QUICK_ACTIONS.map((action) => {
                   const Icon = action.icon;
                   return (
-                    <button
+                    <motion.button
                       key={action.label}
                       onClick={() => handleSubmit(undefined, action.prompt)}
+                      whileHover={{ y: -2, scale: 1.01 }}
+                      whileTap={{ scale: 0.98 }}
                       className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm transition-all duration-150 text-sm text-foreground text-left group"
                     >
                       <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-muted/60 group-hover:bg-primary/10 transition-colors shrink-0">
                         <Icon className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </span>
                       <span className="font-medium text-xs">{action.label}</span>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
