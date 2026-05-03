@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { History as HistoryIcon, MessageSquare, ChevronRight, Inbox, Trash2 } from "lucide-react";
+import { History as HistoryIcon, MessageSquare, ChevronRight, Inbox, Trash2, LogIn } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   useGetConversationHistory,
@@ -20,13 +20,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@workspace/replit-auth-web";
 
 function stripMarkdown(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, "")
     .replace(/`[^`]*`/g, "")
     .replace(/^#{1,6}\s+/gm, "")
-    .replace(/^[=\-]{2,}\s*$/gm, "")     // setext-style heading underlines (=== / ---)
+    .replace(/^[=\-]{2,}\s*$/gm, "")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1")
     .replace(/^\s*[-*+]\s+/gm, "")
@@ -113,13 +114,35 @@ function EmptyState() {
   );
 }
 
+function LoginPrompt({ login }: { login: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 py-24 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="inline-flex items-center justify-center p-5 bg-primary/10 rounded-2xl mb-2">
+        <HistoryIcon className="w-10 h-10 text-primary/60" />
+      </div>
+      <h2 className="text-xl font-semibold tracking-tight">Your conversation history</h2>
+      <p className="text-muted-foreground max-w-sm text-sm">
+        Log in to see your past conversations. Your history is saved privately to your account.
+      </p>
+      <Button onClick={login} className="gap-2 mt-2">
+        <LogIn className="w-4 h-4" />
+        Log in to view history
+      </Button>
+    </div>
+  );
+}
+
 export function History() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [pendingDelete, setPendingDelete] = useState<ConversationCard | null>(null);
+  const { isAuthenticated, isLoading: authLoading, login } = useAuth();
 
   const { data, isLoading } = useGetConversationHistory(undefined, {
-    query: { queryKey: getGetConversationHistoryQueryKey() },
+    query: {
+      queryKey: getGetConversationHistoryQueryKey(),
+      enabled: isAuthenticated,
+    },
   });
 
   const deleteConversation = useDeleteConversation({
@@ -156,7 +179,7 @@ export function History() {
             <div>
               <h1 className="text-lg font-semibold tracking-tight">Conversation History</h1>
               <p className="text-xs text-muted-foreground">
-                {conversations.length > 0
+                {isAuthenticated && conversations.length > 0
                   ? `${conversations.length} conversation${conversations.length !== 1 ? "s" : ""}`
                   : "Browse past sessions"}
               </p>
@@ -165,12 +188,14 @@ export function History() {
         </header>
 
         <ScrollArea className="flex-1 px-4 py-4">
-          {isLoading ? (
+          {authLoading || (isAuthenticated && isLoading) ? (
             <div className="space-y-3 p-2">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-24 w-full rounded-xl" />
               ))}
             </div>
+          ) : !isAuthenticated ? (
+            <LoginPrompt login={login} />
           ) : conversations.length === 0 ? (
             <EmptyState />
           ) : (
@@ -229,7 +254,6 @@ export function History() {
         </ScrollArea>
       </div>
 
-      {/* Delete confirmation dialog */}
       <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -242,8 +266,7 @@ export function History() {
                       ? pendingDelete.firstUserMessage.slice(0, 60) + "…"
                       : pendingDelete.firstUserMessage}"
                   </span>
-                  <br />
-                  <br />
+                  <br /><br />
                   This will permanently delete the conversation and all its messages. This cannot be undone.
                 </>
               )}

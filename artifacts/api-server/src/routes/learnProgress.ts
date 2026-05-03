@@ -5,12 +5,8 @@ import { randomUUID } from "crypto";
 
 const router = Router();
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function todayUtc(): string {
-  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  return new Date().toISOString().slice(0, 10);
 }
 
 async function logActivity(userId: string): Promise<void> {
@@ -43,10 +39,8 @@ function computeStreak(dates: string[]): { current: number; longest: number } {
   const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
   const last = sorted[sorted.length - 1];
 
-  // Streak is live only if last activity was today or yesterday
   if (last !== today && last !== yesterday) return { current: 0, longest };
 
-  // Walk backwards from last to count the current run
   let current = 1;
   for (let i = sorted.length - 2; i >= 0; i--) {
     const next = new Date(sorted[i + 1]);
@@ -60,14 +54,15 @@ function computeStreak(dates: string[]): { current: number; longest: number } {
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/learn/progress?userId=xxx
+// GET /api/learn/progress — requires authentication
 // ---------------------------------------------------------------------------
 router.get("/", async (req, res) => {
-  const userId = (req.query.userId as string ?? "").trim();
-  if (!userId) {
-    res.status(400).json({ error: "Bad Request", message: "userId query param is required." });
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized", message: "Login required to view progress." });
     return;
   }
+
+  const userId = req.user.id;
 
   try {
     const rows = await db
@@ -93,15 +88,17 @@ router.get("/", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/learn/progress
+// POST /api/learn/progress — requires authentication
 // ---------------------------------------------------------------------------
 router.post("/", async (req, res) => {
-  const { userId, language, difficulty, topic, completedLevels } = req.body ?? {};
-
-  if (typeof userId !== "string" || !userId.trim()) {
-    res.status(400).json({ error: "Bad Request", message: "userId is required." });
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized", message: "Login required to save progress." });
     return;
   }
+
+  const userId = req.user.id;
+  const { language, difficulty, topic, completedLevels } = req.body ?? {};
+
   if (typeof language !== "string" || !language.trim()) {
     res.status(400).json({ error: "Bad Request", message: "language is required." });
     return;
@@ -125,7 +122,7 @@ router.post("/", async (req, res) => {
       .from(learnProgress)
       .where(
         and(
-          eq(learnProgress.userId, userId.trim()),
+          eq(learnProgress.userId, userId),
           eq(learnProgress.language, language.trim().toLowerCase()),
           eq(learnProgress.difficulty, difficulty.trim().toLowerCase()),
           eq(learnProgress.topic, topic.trim()),
@@ -147,7 +144,7 @@ router.post("/", async (req, res) => {
         .insert(learnProgress)
         .values({
           id: randomUUID(),
-          userId: userId.trim(),
+          userId,
           language: language.trim().toLowerCase(),
           difficulty: difficulty.trim().toLowerCase(),
           topic: topic.trim(),
@@ -158,8 +155,7 @@ router.post("/", async (req, res) => {
       row = inserted;
     }
 
-    // Log today as an active learning day (fire-and-forget)
-    logActivity(userId.trim()).catch(() => {});
+    logActivity(userId).catch(() => {});
 
     res.json({
       id: row.id,
@@ -177,22 +173,21 @@ router.post("/", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/learn/progress/activity?userId=xxx&weeks=26
+// GET /api/learn/progress/activity — requires authentication
 // ---------------------------------------------------------------------------
 router.get("/activity", async (req, res) => {
-  const userId = (req.query.userId as string ?? "").trim();
-  if (!userId) {
-    res.status(400).json({ error: "Bad Request", message: "userId query param is required." });
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized", message: "Login required." });
     return;
   }
 
+  const userId = req.user.id;
   const weeksRaw = parseInt((req.query.weeks as string) ?? "26", 10);
   const weeks = Number.isFinite(weeksRaw) && weeksRaw >= 1 && weeksRaw <= 52 ? weeksRaw : 26;
 
   try {
-    // Start from the Sunday of (weeks) ago so the grid aligns to week boundaries
     const now = new Date();
-    const dayOfWeek = now.getUTCDay(); // 0 = Sunday
+    const dayOfWeek = now.getUTCDay();
     const endDate = now.toISOString().slice(0, 10);
     const startMs = now.getTime() - (dayOfWeek + (weeks - 1) * 7) * 86_400_000;
     const startDate = new Date(startMs).toISOString().slice(0, 10);
@@ -217,14 +212,15 @@ router.get("/activity", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/learn/streak?userId=xxx
+// GET /api/learn/streak — requires authentication
 // ---------------------------------------------------------------------------
 router.get("/streak", async (req, res) => {
-  const userId = (req.query.userId as string ?? "").trim();
-  if (!userId) {
-    res.status(400).json({ error: "Bad Request", message: "userId query param is required." });
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized", message: "Login required." });
     return;
   }
+
+  const userId = req.user.id;
 
   try {
     const rows = await db

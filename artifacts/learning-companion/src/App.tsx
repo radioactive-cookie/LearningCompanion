@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { MessageSquare, History, Moon, Sun, Code2, Trophy, Zap, Key } from "lucide-react";
+import { MessageSquare, History, Moon, Sun, Code2, Trophy, Zap, Key, LogIn, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ import { CertificatePage } from "@/pages/certificate";
 import NotFound from "@/pages/not-found";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { useGetAiUsage, getGetAiUsageQueryKey } from "@workspace/api-client-react";
+import { useAuth } from "@workspace/replit-auth-web";
 
 // ---------------------------------------------------------------------------
 // AI Usage Indicator
@@ -40,7 +41,6 @@ function UsageIndicator() {
   const primaryPct = Math.min((primaryTokensUsed / dailyLimit) * 100, 100);
   const backupPct  = Math.min((backupTokensUsed  / dailyLimit) * 100, 100);
 
-  // Time until reset
   const msUntilReset = new Date(resetAtUtc).getTime() - Date.now();
   const hoursLeft = Math.floor(msUntilReset / 3_600_000);
   const minsLeft  = Math.floor((msUntilReset % 3_600_000) / 60_000);
@@ -157,6 +157,71 @@ const queryClient = new QueryClient({
   },
 });
 
+// ---------------------------------------------------------------------------
+// User panel in sidebar
+// ---------------------------------------------------------------------------
+function UserPanel() {
+  const { user, isLoading, isAuthenticated, login, logout } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="px-4 pb-4">
+        <div className="h-9 w-full rounded-lg bg-sidebar-accent/50 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="px-4 pb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start gap-2 text-sidebar-foreground/80 border-sidebar-border hover:bg-sidebar-accent"
+          onClick={login}
+          data-testid="btn-login"
+        >
+          <LogIn className="w-4 h-4" />
+          Log in
+        </Button>
+      </div>
+    );
+  }
+
+  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email?.split("@")[0] || "User";
+  const initials = [(user.firstName ?? "")[0], (user.lastName ?? "")[0]].filter(Boolean).join("").toUpperCase() || displayName[0]?.toUpperCase() || "U";
+
+  return (
+    <div className="px-4 pb-4 space-y-2">
+      <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg bg-sidebar-accent/30">
+        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold overflow-hidden">
+          {user.profileImageUrl ? (
+            <img src={user.profileImageUrl} alt={displayName} className="w-full h-full object-cover" />
+          ) : (
+            <span>{initials}</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-sidebar-foreground truncate">{displayName}</p>
+          {user.email && (
+            <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+          )}
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 text-xs"
+        onClick={logout}
+        data-testid="btn-logout"
+      >
+        <LogOut className="w-3.5 h-3.5" />
+        Log out
+      </Button>
+    </div>
+  );
+}
+
 function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { theme, setTheme } = useTheme();
@@ -223,7 +288,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <div className="border-t border-sidebar-border pt-3">
             <UsageIndicator />
           </div>
-          <div className="px-4 pb-4">
+          <div className="px-4 pb-3">
             <Button
               variant="ghost"
               size="sm"
@@ -234,6 +299,9 @@ function Layout({ children }: { children: React.ReactNode }) {
               {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
             </Button>
+          </div>
+          <div className="border-t border-sidebar-border pt-3">
+            <UserPanel />
           </div>
         </div>
       </nav>
@@ -247,9 +315,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 function Router() {
   return (
     <Switch>
-      {/* Landing — full screen, no sidebar */}
       <Route path="/" component={Landing} />
-      {/* App routes — inside sidebar layout */}
       <Route path="/chat">
         <Layout><Chat /></Layout>
       </Route>
@@ -265,7 +331,6 @@ function Router() {
       <Route path="/progress">
         <Layout><Progress /></Layout>
       </Route>
-      {/* Public certificate page — no sidebar */}
       <Route path="/certificate/:id" component={CertificatePage} />
       <Route component={NotFound} />
     </Switch>

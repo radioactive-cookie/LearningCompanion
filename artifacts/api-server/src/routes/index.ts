@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import authRouter from "./auth";
 import aiRouter from "./ai";
 import projectRouter from "./project";
 import learnRouter from "./learn";
@@ -9,6 +10,7 @@ import certificatesRouter from "./certificates";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(authRouter);
 router.use("/ai", aiRouter);
 router.use("/project", projectRouter);
 router.use("/learn/progress", learnProgressRouter);

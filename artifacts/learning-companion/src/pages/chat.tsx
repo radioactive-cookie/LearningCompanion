@@ -17,7 +17,9 @@ import {
   Search,
   UserRound,
   Pen,
+  LogIn,
 } from "lucide-react";
+import { useAuth } from "@workspace/replit-auth-web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,10 +44,12 @@ type EnrichedMessage = ChatMessage & { conversationId?: string };
 type ChatMode = "normal" | "temporary";
 
 // ---------------------------------------------------------------------------
-// Username helpers — stored in localStorage so it persists across visits
+// Guest username helpers (localStorage fallback for unauthenticated users)
 // ---------------------------------------------------------------------------
 const USERNAME_KEY = "companion-username";
 const USERNAME_SET_KEY = "companion-username-set";
+const GUEST_MSG_COUNT_KEY = "companion-guest-msg-count";
+const GUEST_FREE_LIMIT = 5;
 
 function getStoredUsername(): string {
   return localStorage.getItem(USERNAME_KEY) ?? "Learner";
@@ -59,6 +63,16 @@ function saveUsername(name: string) {
   const trimmed = name.trim() || "Learner";
   localStorage.setItem(USERNAME_KEY, trimmed);
   localStorage.setItem(USERNAME_SET_KEY, "true");
+}
+
+function getGuestMsgCount(): number {
+  return parseInt(localStorage.getItem(GUEST_MSG_COUNT_KEY) ?? "0", 10);
+}
+
+function incrementGuestMsgCount(): number {
+  const next = getGuestMsgCount() + 1;
+  localStorage.setItem(GUEST_MSG_COUNT_KEY, String(next));
+  return next;
 }
 
 // ---------------------------------------------------------------------------
@@ -228,15 +242,55 @@ function useDictation(onResult: (text: string) => void) {
 }
 
 // ---------------------------------------------------------------------------
-// Main Chat component
+// Login prompt modal (shown after guest hits 5-message limit)
 // ---------------------------------------------------------------------------
+function GuestLimitPrompt({ login, onDismiss }: { login: () => void; onDismiss: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-sm mx-4 bg-card border border-border rounded-2xl shadow-xl p-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="flex justify-center mb-4">
+          <div className="p-3 rounded-xl bg-primary/10 text-primary">
+            <LogIn className="w-6 h-6" />
+          </div>
+        </div>
+        <h2 className="text-lg font-bold text-foreground text-center mb-1">
+          You've used {GUEST_FREE_LIMIT} free messages
+        </h2>
+        <p className="text-sm text-muted-foreground text-center mb-5">
+          Log in to keep chatting and save your conversation history to your account — it's free.
+        </p>
+        <div className="flex flex-col gap-2">
+          <Button className="h-11 rounded-xl gap-2 font-medium" onClick={login} data-testid="btn-login-prompt">
+            <LogIn className="w-4 h-4" />
+            Log in to continue
+          </Button>
+          <button
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center py-1"
+            onClick={onDismiss}
+            data-testid="btn-dismiss-limit"
+          >
+            Dismiss for now
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Chat() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const resumeSessionId = params.get("resume") ?? undefined;
 
-  const [username, setUsername] = useState(() => getStoredUsername());
-  const [showNamePrompt, setShowNamePrompt] = useState(() => !hasUserSetName());
+  const { user, isAuthenticated, login } = useAuth();
+
+  // Derive display name: auth user name takes priority; fallback to stored guest name
+  const authName = user ? ([user.firstName, user.lastName].filter(Boolean).join(" ") || user.email?.split("@")[0] || "Learner") : null;
+  const [guestUsername, setGuestUsername] = useState(() => getStoredUsername());
+  const username = authName ?? guestUsername;
+
+  const [showNamePrompt, setShowNamePrompt] = useState(() => !isAuthenticated && !hasUserSetName());
+  const [showGuestLimit, setShowGuestLimit] = useState(false);
   const [chatMode, setChatMode] = useState<ChatMode>("normal");
 
   const [messages, setMessages] = useState<EnrichedMessage[]>([]);
@@ -320,6 +374,15 @@ export function Chat() {
     e?.preventDefault();
     const messageToSend = customMessage || input;
     if (!messageToSend.trim()) return;
+
+    // Enforce guest message limit (client-side UX gate)
+    if (!isAuthenticated) {
+      const newCount = incrementGuestMsgCount();
+      if (newCount > GUEST_FREE_LIMIT) {
+        setShowGuestLimit(true);
+        return;
+      }
+    }
 
     const userMsg: EnrichedMessage = {
       id: Date.now().toString(),
@@ -415,15 +478,20 @@ export function Chat() {
   const isInitialState = messages.length === 0 && !isLoadingResume;
 
   const handleNameSave = (name: string) => {
-    setUsername(name);
+    setGuestUsername(name);
     setShowNamePrompt(false);
   };
 
   return (
     <div className="flex flex-col h-full bg-background w-full relative">
 
-      {/* ── Name prompt overlay (first visit or triggered manually) ── */}
-      {showNamePrompt && (
+      {/* ── Guest limit prompt (after 5 messages without login) ── */}
+      {showGuestLimit && (
+        <GuestLimitPrompt login={login} onDismiss={() => setShowGuestLimit(false)} />
+      )}
+
+      {/* ── Name prompt overlay (guest first visit) ── */}
+      {!isAuthenticated && showNamePrompt && (
         <NamePrompt onSave={handleNameSave} />
       )}
 
@@ -456,17 +524,19 @@ export function Chat() {
             </span>
           </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 text-muted-foreground h-8 text-xs hidden sm:flex"
-            onClick={() => setShowNamePrompt(true)}
-            data-testid="btn-edit-name"
-            title="Change your display name"
-          >
-            <Pen className="w-3.5 h-3.5" />
-            @{username}
-          </Button>
+          {!isAuthenticated && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground h-8 text-xs hidden sm:flex"
+              onClick={() => setShowNamePrompt(true)}
+              data-testid="btn-edit-name"
+              title="Change your display name"
+            >
+              <Pen className="w-3.5 h-3.5" />
+              @{username}
+            </Button>
+          )}
 
           {(sessionId || messages.length > 0) && (
             <Button

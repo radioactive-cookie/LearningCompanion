@@ -6,16 +6,17 @@ import { randomUUID } from "crypto";
 const router = Router();
 
 // ---------------------------------------------------------------------------
-// POST /api/certificates
-// Create or retrieve a certificate (idempotent by userId+language+topic)
+// POST /api/certificates — requires authentication
 // ---------------------------------------------------------------------------
 router.post("/", async (req, res) => {
-  const { userId, userName, language, topic } = req.body ?? {};
-
-  if (typeof userId !== "string" || !userId.trim()) {
-    res.status(400).json({ error: "Bad Request", message: "userId is required." });
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized", message: "Login required to issue certificates." });
     return;
   }
+
+  const userId = req.user.id;
+  const { language, topic } = req.body ?? {};
+
   if (typeof language !== "string" || !language.trim()) {
     res.status(400).json({ error: "Bad Request", message: "language is required." });
     return;
@@ -25,7 +26,10 @@ router.post("/", async (req, res) => {
     return;
   }
 
-  const cleanName = typeof userName === "string" && userName.trim() ? userName.trim() : "Learner";
+  // Derive display name from the authenticated user's profile
+  const firstName = req.user.firstName ?? "";
+  const lastName = req.user.lastName ?? "";
+  const userName = [firstName, lastName].filter(Boolean).join(" ").trim() || req.user.email?.split("@")[0] || "Learner";
 
   try {
     const existing = await db
@@ -33,7 +37,7 @@ router.post("/", async (req, res) => {
       .from(certificates)
       .where(
         and(
-          eq(certificates.userId, userId.trim()),
+          eq(certificates.userId, userId),
           eq(certificates.language, language.trim().toLowerCase()),
           eq(certificates.topic, topic.trim()),
         ),
@@ -57,8 +61,8 @@ router.post("/", async (req, res) => {
       .insert(certificates)
       .values({
         id: randomUUID(),
-        userId: userId.trim(),
-        userName: cleanName,
+        userId,
+        userName,
         language: language.trim().toLowerCase(),
         topic: topic.trim(),
         issuedAt: new Date(),
@@ -80,7 +84,7 @@ router.post("/", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/certificates/:id  — public, no auth needed
+// GET /api/certificates/:id — public (share link)
 // ---------------------------------------------------------------------------
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
@@ -117,14 +121,15 @@ router.get("/:id", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/certificates?userId=xxx — list all certificates for a user
+// GET /api/certificates — list certificates for authenticated user
 // ---------------------------------------------------------------------------
 router.get("/", async (req, res) => {
-  const userId = (req.query.userId as string ?? "").trim();
-  if (!userId) {
-    res.status(400).json({ error: "Bad Request", message: "userId query param is required." });
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized", message: "Login required." });
     return;
   }
+
+  const userId = req.user.id;
 
   try {
     const rows = await db

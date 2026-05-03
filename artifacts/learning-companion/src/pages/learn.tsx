@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useAuth } from "@workspace/replit-auth-web";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useSearch } from "wouter";
@@ -45,18 +46,6 @@ import type {
   CertificateRecord,
 } from "@workspace/api-client-react";
 import { CertificateModal } from "@/components/CertificateModal";
-
-// ---------------------------------------------------------------------------
-// Anonymous user ID — generated once, stored in localStorage
-// ---------------------------------------------------------------------------
-function getOrCreateUserId(): string {
-  const KEY = "learn-user-id";
-  const stored = localStorage.getItem(KEY);
-  if (stored) return stored;
-  const id = crypto.randomUUID();
-  localStorage.setItem(KEY, id);
-  return id;
-}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -614,9 +603,8 @@ function LessonView({
 
 export function Learn() {
   const search = useSearch();
-
-  // Stable anonymous user ID from localStorage
-  const [userId] = useState(() => getOrCreateUserId());
+  const { user } = useAuth();
+  const userId = user?.id ?? "";
 
   // Parse resume params from URL (?resumeLanguage=python&resumeDifficulty=beginner&resumeTopic=X)
   const resumeParams = useState(() => {
@@ -700,12 +688,12 @@ export function Learn() {
   });
 
   const tryIssueCertificate = useCallback((topic: string, language: string) => {
+    if (!userId) return; // requires authentication
     const key = `${language}::${topic}`;
     if (certIssuedRef.current.has(key)) return;
     certIssuedRef.current.add(key);
-    const userName = localStorage.getItem("certificate-user-name") ?? "Learner";
     createCertMutation.mutate({
-      data: { userId, userName, language, topic },
+      data: { language, topic },
     });
   }, [userId, createCertMutation]);
 
@@ -715,9 +703,9 @@ export function Learn() {
   const saveProgressMutation = useSaveLearnProgress();
 
   const persistProgress = (topic: string, newCompletedSet: Set<number>) => {
+    if (!userId) return; // requires authentication
     saveProgressMutation.mutate({
       data: {
-        userId,
         language: selectedLanguage.id,
         difficulty: selectedDifficulty,
         topic,

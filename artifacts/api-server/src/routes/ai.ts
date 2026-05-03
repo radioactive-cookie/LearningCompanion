@@ -2,7 +2,7 @@ import { Router } from "express";
 import { callAI, callAIFast, getUsageStats, type ConversationMessage } from "../lib/groq";
 import { db } from "@workspace/db";
 import { conversations, messages, insertConversationSchema, insertMessageSchema } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -35,11 +35,9 @@ General guidelines:
 // POST /api/ai
 // ---------------------------------------------------------------------------
 router.post("/", async (req, res) => {
-  // --- Validate request body ------------------------------------------------
   const { systemPrompt, userMessage, message, sessionId, topic, temporary } = req.body ?? {};
   const isTemporary = temporary === true;
 
-  // Support both { userMessage } (new spec) and { message } (legacy frontend)
   const userInput: unknown = userMessage ?? message;
 
   if (!userInput || typeof userInput !== "string" || userInput.trim() === "") {
@@ -64,18 +62,12 @@ router.post("/", async (req, res) => {
       : DEFAULT_SYSTEM_PROMPT + (topic ? `\nCurrent topic focus: ${topic}` : "");
 
   const trimmedInput = userInput.trim();
+  const authenticatedUserId = req.isAuthenticated() ? req.user.id : null;
 
   try {
     if (isTemporary) {
-      // --- Temporary / ephemeral mode: no DB reads or writes -----------------
-      // The client passes its in-memory history as a JSON-encoded string in
-      // the topic field (not used), so we just build the history from the
-      // request body directly and call the AI without touching the DB.
-      // We return a synthetic sessionId of "temp" so the client can track
-      // the session in memory only.
       const tempHistory: ConversationMessage[] = [];
 
-      // If the client sends prior messages for context, decode them
       const priorMessages: unknown = (req.body as Record<string, unknown>).priorMessages;
       if (Array.isArray(priorMessages)) {
         for (const m of priorMessages as Array<{ role: string; content: string }>) {
@@ -85,7 +77,6 @@ router.post("/", async (req, res) => {
         }
       }
 
-      // Append current user message
       tempHistory.push({ role: "user", content: trimmedInput });
 
       const reply = await callAI(resolvedSystemPrompt, tempHistory);
@@ -94,15 +85,17 @@ router.post("/", async (req, res) => {
       return;
     }
 
-    // --- Persistent mode: normal DB-backed conversation ---------------------
-    // sessionId from the client is always a string; convert to int for DB ops.
+    // --- Persistent mode: DB-backed conversation ---
     const incomingId = typeof sessionId === "string" ? parseInt(sessionId, 10) : NaN;
     let conversationId: number | undefined = !isNaN(incomingId) ? incomingId : undefined;
 
     if (!conversationId) {
       const [conv] = await db
         .insert(conversations)
-        .values(insertConversationSchema.parse({ title: topic ?? "New conversation" }))
+        .values(insertConversationSchema.parse({
+          title: topic ?? "New conversation",
+          userId: authenticatedUserId,
+        }))
         .returning();
       conversationId = conv.id;
     } else {
@@ -112,18 +105,24 @@ router.post("/", async (req, res) => {
       if (!existing) {
         const [conv] = await db
           .insert(conversations)
-          .values(insertConversationSchema.parse({ title: topic ?? "New conversation" }))
+          .values(insertConversationSchema.parse({
+            title: topic ?? "New conversation",
+            userId: authenticatedUserId,
+          }))
           .returning();
         conversationId = conv.id;
+      } else if (authenticatedUserId && !existing.userId) {
+        // Claim the conversation for this authenticated user if it was previously a guest conversation
+        await db.update(conversations)
+          .set({ userId: authenticatedUserId })
+          .where(eq(conversations.id, conversationId));
       }
     }
 
-    // Persist user message before calling AI
     await db.insert(messages).values(
       insertMessageSchema.parse({ conversationId, role: "user", content: trimmedInput }),
     );
 
-    // Fetch full conversation history so the model has real context
     const history = await db.query.messages.findMany({
       where: eq(messages.conversationId, conversationId),
       orderBy: (m, { asc }) => [asc(m.createdAt)],
@@ -136,7 +135,6 @@ router.post("/", async (req, res) => {
 
     const reply = await callAI(resolvedSystemPrompt, conversationMessages);
 
-    // Persist assistant reply
     await db.insert(messages).values(
       insertMessageSchema.parse({ conversationId, role: "assistant", content: reply }),
     );
@@ -149,14 +147,12 @@ router.post("/", async (req, res) => {
   } catch (err: unknown) {
     req.log.error({ err }, "Error in POST /api/ai");
 
-    // Groq rate-limit (429)
     if (
       err != null &&
       typeof err === "object" &&
       "status" in err &&
       (err as { status: number }).status === 429
     ) {
-      // Try to extract the retry-after hint from the error message
       const raw = err instanceof Error ? err.message : "";
       const retryMatch = raw.match(/Please try again in ([^.]+)\./);
       const retryHint = retryMatch ? ` Please try again in ${retryMatch[1]}.` : " Please try again later.";
@@ -184,17 +180,32 @@ router.get("/usage", (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/ai/history
+// GET /api/ai/history — requires authentication
 // ---------------------------------------------------------------------------
 router.get("/history", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized", message: "Login required to view history." });
+    return;
+  }
+
+  const userId = req.user.id;
+
   try {
     const { sessionId } = req.query as { sessionId?: string };
 
     if (sessionId) {
-      // Return messages for a specific conversation
       const convId = parseInt(sessionId, 10);
       if (isNaN(convId)) {
         res.status(400).json({ error: "Bad Request", message: "Invalid sessionId." });
+        return;
+      }
+
+      // Verify the conversation belongs to this user
+      const conv = await db.query.conversations.findFirst({
+        where: and(eq(conversations.id, convId), eq(conversations.userId, userId)),
+      });
+      if (!conv) {
+        res.status(404).json({ error: "Not Found", message: "Conversation not found." });
         return;
       }
 
@@ -214,14 +225,28 @@ router.get("/history", async (req, res) => {
         })),
       });
     } else {
-      // No sessionId — return all messages from all conversations
+      // Return all conversations for this authenticated user
+      const userConversations = await db.query.conversations.findMany({
+        where: eq(conversations.userId, userId),
+        orderBy: (c, { asc }) => [asc(c.createdAt)],
+      });
+
+      const convIds = userConversations.map((c) => c.id);
+
+      if (convIds.length === 0) {
+        res.json({ sessionId: "", messages: [] });
+        return;
+      }
+
       const allMessages = await db.query.messages.findMany({
         orderBy: (m, { asc }) => [asc(m.createdAt)],
       });
 
+      const filteredMessages = allMessages.filter((m) => convIds.includes(m.conversationId));
+
       res.json({
         sessionId: "",
-        messages: allMessages.map((msg) => ({
+        messages: filteredMessages.map((msg) => ({
           id: String(msg.id),
           role: msg.role,
           content: msg.content,
@@ -237,10 +262,17 @@ router.get("/history", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/ai/history/:sessionId
+// DELETE /api/ai/history/:sessionId — requires authentication
 // ---------------------------------------------------------------------------
 router.delete("/history/:sessionId", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized", message: "Login required." });
+    return;
+  }
+
+  const userId = req.user.id;
   const convId = parseInt(req.params.sessionId, 10);
+
   if (isNaN(convId)) {
     res.status(400).json({ error: "Bad Request", message: "Invalid sessionId." });
     return;
@@ -248,7 +280,7 @@ router.delete("/history/:sessionId", async (req, res) => {
 
   try {
     const existing = await db.query.conversations.findFirst({
-      where: eq(conversations.id, convId),
+      where: and(eq(conversations.id, convId), eq(conversations.userId, userId)),
     });
 
     if (!existing) {
@@ -256,8 +288,6 @@ router.delete("/history/:sessionId", async (req, res) => {
       return;
     }
 
-    // messages.conversationId has onDelete: "cascade" so deleting the
-    // conversation also removes its messages automatically.
     await db.delete(conversations).where(eq(conversations.id, convId));
 
     res.json({ success: true, sessionId: req.params.sessionId });
@@ -268,7 +298,7 @@ router.delete("/history/:sessionId", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/ai/topics  — AI-generated, refreshed every 10 minutes
+// GET /api/ai/topics
 // ---------------------------------------------------------------------------
 type TopicEntry = {
   id: string;
@@ -289,7 +319,7 @@ const FALLBACK_TOPICS: TopicEntry[] = [
 
 let cachedTopics: TopicEntry[] | null = null;
 let cacheExpiresAt = 0;
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours — topics don't need constant refresh
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 const TOPICS_SYSTEM_PROMPT = `You are a curriculum designer. Return ONLY a valid JSON array — no markdown, no explanation, no code fences. The array must contain exactly 6 objects.
 
@@ -319,7 +349,6 @@ router.get("/topics", async (req, res) => {
       { role: "user", content: `Today is ${new Date().toDateString()}. Generate 6 diverse learning topic suggestions.` },
     ]);
 
-    // Extract JSON array from the response (handle any stray text)
     const jsonMatch = raw.match(/\[[\s\S]*\]/);
     if (!jsonMatch) throw new Error("No JSON array found in response");
 
