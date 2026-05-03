@@ -73,38 +73,19 @@ async function getAdminCount(): Promise<number> {
 
 // GET /api/admin/status — returns auth + admin state (no sensitive data)
 router.get("/admin/status", async (req: Request, res: Response) => {
-  const isAuthenticated = req.isAuthenticated();
-  const email = req.user?.email ?? null;
-
-  // Bootstrap mode: no admins exist yet → let first authenticated user self-register
-  const adminCount = await getAdminCount();
-  const bootstrapMode = adminCount === 0;
-
-  if (!isAuthenticated || !email) {
-    res.json({ isAuthenticated: false, isAdminEmail: false, isAdminVerified: false, bootstrapMode });
+  // Only sessions explicitly created via login-direct have adminVerified=true
+  if (!req.adminVerified) {
+    const hasPassword = !!(await getPasswordHash());
+    res.json({ isAuthenticated: false, isAdminEmail: false, isAdminVerified: false, hasPassword });
     return;
   }
 
-  const adminEmail = bootstrapMode || await isAdminEmail(email);
-
-  // Auto-verify session when user is an admin — no separate password step needed
-  if (adminEmail && !req.adminVerified) {
-    if (bootstrapMode) {
-      await db.insert(adminEmailsTable).values({ email: email.toLowerCase() }).onConflictDoNothing();
-    }
-    const sid = getSessionId(req);
-    if (sid) {
-      const session = await getSession(sid);
-      if (session) await updateSession(sid, { ...session, adminVerified: true });
-    }
-  }
-
+  const email = req.user?.email ?? null;
   res.json({
     isAuthenticated: true,
-    isAdminEmail: adminEmail,
-    isAdminVerified: adminEmail,
-    bootstrapMode,
-    displayName: [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" ") || email,
+    isAdminEmail: true,
+    isAdminVerified: true,
+    hasPassword: true,
     email,
   });
 });
@@ -165,6 +146,34 @@ router.post("/admin/login-direct", async (req: Request, res: Response) => {
     maxAge: SESSION_TTL,
     path: "/",
   });
+
+  res.json({ success: true });
+});
+
+// POST /api/admin/add-initial — one-shot setup: register email + set password (only when no password exists)
+router.post("/admin/add-initial", async (req: Request, res: Response) => {
+  const hash = await getPasswordHash();
+  if (hash) {
+    res.status(400).json({ error: "Admin already configured. Use the login page." });
+    return;
+  }
+
+  const { email, password } = req.body ?? {};
+  if (!email || !password) {
+    res.status(400).json({ error: "Email and password are required" });
+    return;
+  }
+  if (String(password).length < 6) {
+    res.status(400).json({ error: "Password must be at least 6 characters" });
+    return;
+  }
+
+  const normalizedEmail = String(email).toLowerCase().trim();
+  const newHash = await bcrypt.hash(String(password), 12);
+
+  await db.insert(adminEmailsTable).values({ email: normalizedEmail }).onConflictDoNothing();
+  await db.insert(adminConfigTable).values({ key: ADMIN_PASSWORD_CONFIG_KEY, value: newHash })
+    .onConflictDoUpdate({ target: adminConfigTable.key, set: { value: newHash } });
 
   res.json({ success: true });
 });

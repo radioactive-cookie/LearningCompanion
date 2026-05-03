@@ -11,6 +11,94 @@ async function api(path: string, options?: RequestInit) {
   });
 }
 
+// ── Set password (first-time setup) ───────────────────────────────────────────
+function SetupPassword({ onDone }: { onDone: () => void }) {
+  const [adminEmail, setAdminEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [show, setShow] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (password !== confirm) { setError("Passwords don't match"); return; }
+    if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
+    setBusy(true);
+
+    // First add the admin email, then set the password
+    const addRes = await api("/api/admin/add-initial", {
+      method: "POST",
+      body: JSON.stringify({ email: adminEmail.trim(), password }),
+    });
+    const data = await addRes.json();
+    if (!addRes.ok) { setError(data.error ?? "Setup failed"); setBusy(false); return; }
+    onDone();
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gray-800 mb-4">
+            <Shield className="w-6 h-6 text-gray-300" />
+          </div>
+          <h1 className="text-xl font-semibold text-white">Admin Setup</h1>
+          <p className="text-sm text-gray-500 mt-1">Create your admin account to get started</p>
+        </div>
+
+        <form onSubmit={submit} className="space-y-3">
+          <input
+            type="email"
+            value={adminEmail}
+            onChange={e => setAdminEmail(e.target.value)}
+            placeholder="Admin email"
+            required
+            autoFocus
+            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-gray-500 transition-colors"
+          />
+          <div className="relative">
+            <input
+              type={show ? "text" : "password"}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Password"
+              required
+              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 pr-10 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-gray-500 transition-colors"
+            />
+            <button type="button" onClick={() => setShow(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400">
+              {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          <input
+            type={show ? "text" : "password"}
+            value={confirm}
+            onChange={e => setConfirm(e.target.value)}
+            placeholder="Confirm password"
+            required
+            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-gray-500 transition-colors"
+          />
+
+          {error && (
+            <p className="flex items-center gap-1.5 text-xs text-red-400">
+              <AlertTriangle className="w-3.5 h-3.5" />{error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy || !adminEmail || !password || !confirm}
+            className="w-full bg-white text-gray-900 text-sm font-semibold rounded-lg px-4 py-3 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+          >
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Admin Account"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── Login ──────────────────────────────────────────────────────────────────────
 function Login({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState("");
@@ -130,7 +218,6 @@ function Dashboard({ email, onLogout }: { email: string; onLogout: () => void })
   return (
     <div className="min-h-screen bg-gray-950 px-4 py-8">
       <div className="max-w-lg mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center">
@@ -146,7 +233,6 @@ function Dashboard({ email, onLogout }: { email: string; onLogout: () => void })
           </button>
         </div>
 
-        {/* Add Admin */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <h2 className="text-sm font-medium text-white mb-4 flex items-center gap-2">
             <Plus className="w-4 h-4 text-gray-500" />Add Admin
@@ -175,7 +261,6 @@ function Dashboard({ email, onLogout }: { email: string; onLogout: () => void })
           )}
         </div>
 
-        {/* Admin List */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <h2 className="text-sm font-medium text-white mb-4 flex items-center gap-2">
             <Shield className="w-4 h-4 text-gray-500" />
@@ -215,7 +300,12 @@ function Dashboard({ email, onLogout }: { email: string; onLogout: () => void })
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export function AdminPage() {
-  const [status, setStatus] = useState<{ isAuthenticated: boolean; isAdminEmail: boolean; email?: string } | null>(null);
+  const [status, setStatus] = useState<{
+    isAuthenticated: boolean;
+    isAdminEmail: boolean;
+    hasPassword?: boolean;
+    email?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const check = async () => {
@@ -237,6 +327,10 @@ export function AdminPage() {
 
   if (status?.isAuthenticated && status?.isAdminEmail) {
     return <Dashboard email={status.email!} onLogout={check} />;
+  }
+
+  if (status?.hasPassword === false) {
+    return <SetupPassword onDone={check} />;
   }
 
   return <Login onSuccess={check} />;
