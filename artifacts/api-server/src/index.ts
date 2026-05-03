@@ -1,18 +1,17 @@
+/**
+ * Server entry point.
+ *
+ * Validates all required environment variables before starting.
+ * Secrets (API keys, DB credentials) live only here — never in the frontend.
+ */
+import { env } from "./lib/env";
 import app from "./app";
 import { logger } from "./lib/logger";
 
-const rawPort = process.env["PORT"];
-
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
-const port = Number(rawPort);
+const port = Number(env.PORT);
 
 if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
+  throw new Error(`Invalid PORT value: "${env.PORT}"`);
 }
 
 app.listen(port, (err) => {
@@ -21,5 +20,5 @@ app.listen(port, (err) => {
     process.exit(1);
   }
 
-  logger.info({ port }, "Server listening");
+  logger.info({ port, nodeEnv: env.NODE_ENV }, "Server listening");
 });

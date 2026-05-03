@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Learning Companion Bot"
+version = "1.0.0"
+id = "artifacts/learning-companion"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21891
+
+[services.development]
+run = "pnpm --filter @workspace/learning-companion run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/learning-companion", "run", "build" ]
+publicDir = "artifacts/learning-companion/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21891"
+BASE_PATH = "/"

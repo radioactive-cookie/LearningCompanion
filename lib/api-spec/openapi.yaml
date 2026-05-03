@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Learning Companion Bot API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: ai
+    description: AI learning assistant operations
+  - name: project
+    description: Hybrid learning project operations
+  - name: certificates
+    description: Completion certificate operations
 paths:
   /healthz:
     get:
@@ -24,6 +30,443 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /ai:
+    post:
+      operationId: askAi
+      tags: [ai]
+      summary: Ask the AI learning assistant
+      description: Send a message to the AI learning assistant and get an educational response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiRequest"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /ai/usage:
+    get:
+      operationId: getAiUsage
+      tags: [ai]
+      summary: Get today's AI token usage
+      description: Returns in-memory token usage counters for the current UTC day, per API key.
+      responses:
+        "200":
+          description: Usage stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiUsageStats"
+  /ai/history:
+    get:
+      operationId: getConversationHistory
+      tags: [ai]
+      summary: Get conversation history
+      description: Retrieve the conversation history for the session
+      parameters:
+        - name: sessionId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Conversation history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationHistory"
+  /project:
+    get:
+      operationId: getProject
+      tags: [project]
+      summary: Get project structure
+      description: Returns the current project title and its steps
+      responses:
+        "200":
+          description: Project data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+  /project/lesson:
+    post:
+      operationId: getLesson
+      tags: [project]
+      summary: Get an AI-generated lesson for a step
+      description: Generates an explanation, coding task, and hint for the given step
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LessonRequest"
+      responses:
+        "200":
+          description: Lesson content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Step not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /ai/history/{sessionId}:
+    delete:
+      operationId: deleteConversation
+      tags: [ai]
+      summary: Delete a conversation
+      description: Permanently deletes a conversation and all its messages
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Conversation deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+        "404":
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /ai/topics:
+    get:
+      operationId: getSuggestedTopics
+      tags: [ai]
+      summary: Get suggested learning topics
+      description: Returns a curated list of suggested learning topics
+      responses:
+        "200":
+          description: Suggested topics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestedTopics"
+  /certificates:
+    post:
+      operationId: createCertificate
+      tags: [certificates]
+      summary: Create or retrieve a completion certificate
+      description: Idempotent — returns the existing certificate if one already exists for this user+language+topic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCertificateRequest"
+      responses:
+        "200":
+          description: Existing certificate returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateRecord"
+        "201":
+          description: New certificate created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateRecord"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      operationId: listCertificates
+      tags: [certificates]
+      summary: List all certificates for a user
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Certificate list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateList"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /certificates/{id}:
+    get:
+      operationId: getCertificate
+      tags: [certificates]
+      summary: Get a certificate by ID (public)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Certificate record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateRecord"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /learn/suggestions:
+    get:
+      operationId: getLearnSuggestions
+      tags: [learn]
+      summary: Get AI-generated topic suggestions
+      description: Returns topic suggestions for a given language and difficulty level
+      parameters:
+        - name: language
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [beginner, intermediate, advanced]
+      responses:
+        "200":
+          description: Topic suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearnSuggestions"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /learn/progress:
+    get:
+      operationId: getLearnProgress
+      tags: [learn]
+      summary: Get saved progress for all topics
+      description: Returns all saved topic progress for the given anonymous user
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User's topic progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearnProgressList"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: saveLearnProgress
+      tags: [learn]
+      summary: Save progress for a topic
+      description: Upserts the completed levels for a topic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveLearnProgressRequest"
+      responses:
+        "200":
+          description: Progress saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearnProgressItem"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /learn/progress/streak:
+    get:
+      operationId: getLearnStreak
+      tags: [learn]
+      summary: Get the current learning streak for a user
+      description: Returns the current consecutive-day streak and the longest ever streak
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user's unique identifier
+      responses:
+        "200":
+          description: Streak data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearnStreak"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /learn/progress/activity:
+    get:
+      operationId: getLearnActivity
+      tags: [learn]
+      summary: Get activity dates for the heatmap
+      description: Returns all dates on which the user had at least one lesson completion, within a given number of past weeks
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The user's unique identifier
+        - name: weeks
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 52
+            default: 26
+          description: How many weeks of history to return (default 26)
+      responses:
+        "200":
+          description: Activity dates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearnActivityDates"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /learn/lesson:
+    post:
+      operationId: getLearnLesson
+      tags: [learn]
+      summary: Get an AI-generated lesson for a topic
+      description: Generates a lesson with explanation, code example, task, hint, and GeeksForGeeks resource link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LearnLessonRequest"
+      responses:
+        "200":
+          description: Lesson content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearnLessonResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +476,418 @@ components:
           type: string
       required:
         - status
-
+    AiRequest:
+      type: object
+      properties:
+        message:
+          type: string
+          description: The user's question or message
+        sessionId:
+          type: string
+          description: Optional session ID for conversation continuity
+        topic:
+          type: string
+          description: Optional topic context
+        temporary:
+          type: boolean
+          description: When true, the message is not persisted to the database
+      required:
+        - message
+    AiUsageStats:
+      type: object
+      properties:
+        primaryTokensUsed:
+          type: integer
+          description: Tokens consumed by the primary API key today
+        backupTokensUsed:
+          type: integer
+          description: Tokens consumed by the backup API key today
+        dailyLimit:
+          type: integer
+          description: Per-key daily token limit
+        activeKey:
+          type: string
+          enum: [primary, backup, none]
+          description: Which key was used for the most recent request
+        primaryExhausted:
+          type: boolean
+          description: Whether the primary key is currently rate-limited
+        backupExhausted:
+          type: boolean
+          description: Whether the backup key is currently rate-limited
+        primaryRetryAfter:
+          type: string
+          format: date-time
+          nullable: true
+          description: ISO timestamp when the primary key cooldown lifts (null if available)
+        backupRetryAfter:
+          type: string
+          format: date-time
+          nullable: true
+          description: ISO timestamp when the backup key cooldown lifts (null if available)
+        hasBackupKey:
+          type: boolean
+          description: Whether a backup API key is configured
+        resetAtUtc:
+          type: string
+          format: date-time
+          description: ISO timestamp when the counters next reset (midnight UTC)
+      required:
+        - primaryTokensUsed
+        - backupTokensUsed
+        - dailyLimit
+        - activeKey
+        - primaryExhausted
+        - backupExhausted
+        - primaryRetryAfter
+        - backupRetryAfter
+        - hasBackupKey
+        - resetAtUtc
+    AiResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+          description: The AI assistant's response
+        sessionId:
+          type: string
+          description: Session ID for this conversation
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - reply
+        - sessionId
+        - timestamp
+    ConversationHistory:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+      required:
+        - sessionId
+        - messages
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - id
+        - role
+        - content
+        - timestamp
+    SuggestedTopics:
+      type: object
+      properties:
+        topics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Topic"
+      required:
+        - topics
+    Topic:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+      required:
+        - id
+        - title
+        - description
+        - category
+        - difficulty
+    ProjectStep:
+      type: object
+      properties:
+        id:
+          type: integer
+        goal:
+          type: string
+      required:
+        - id
+        - goal
+    Project:
+      type: object
+      properties:
+        title:
+          type: string
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectStep"
+      required:
+        - title
+        - steps
+    LessonRequest:
+      type: object
+      properties:
+        stepId:
+          type: integer
+      required:
+        - stepId
+    LessonResponse:
+      type: object
+      properties:
+        explanation:
+          type: string
+        task:
+          type: string
+        hint:
+          type: string
+      required:
+        - explanation
+        - task
+        - hint
+    LearnSuggestion:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+      required:
+        - id
+        - title
+        - description
+    LearnSuggestions:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/LearnSuggestion"
+      required:
+        - suggestions
+    LearnLessonRequest:
+      type: object
+      properties:
+        language:
+          type: string
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        topic:
+          type: string
+        level:
+          type: integer
+          minimum: 1
+          maximum: 5
+      required:
+        - language
+        - difficulty
+        - topic
+        - level
+    LearnLessonResponse:
+      type: object
+      properties:
+        level:
+          type: integer
+        totalLevels:
+          type: integer
+        levelTitle:
+          type: string
+        explanation:
+          type: string
+        codeExample:
+          type: string
+        task:
+          type: string
+        hint:
+          type: string
+      required:
+        - level
+        - totalLevels
+        - levelTitle
+        - explanation
+        - codeExample
+        - task
+        - hint
+    SaveLearnProgressRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        language:
+          type: string
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        topic:
+          type: string
+        completedLevels:
+          type: array
+          items:
+            type: integer
+      required:
+        - userId
+        - language
+        - difficulty
+        - topic
+        - completedLevels
+    LearnProgressItem:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        language:
+          type: string
+        difficulty:
+          type: string
+        topic:
+          type: string
+        completedLevels:
+          type: array
+          items:
+            type: integer
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - language
+        - difficulty
+        - topic
+        - completedLevels
+        - updatedAt
+    LearnStreak:
+      type: object
+      properties:
+        currentStreak:
+          type: integer
+          description: Consecutive days with at least one lesson completed, ending today or yesterday
+        longestStreak:
+          type: integer
+          description: The all-time longest streak in days
+        todayActive:
+          type: boolean
+          description: Whether the user has completed a lesson today
+        lastActivityDate:
+          type: string
+          nullable: true
+          description: ISO date string of the most recent activity (YYYY-MM-DD)
+      required:
+        - currentStreak
+        - longestStreak
+        - todayActive
+        - lastActivityDate
+    LearnActivityDates:
+      type: object
+      properties:
+        dates:
+          type: array
+          items:
+            type: string
+          description: Array of YYYY-MM-DD strings on which the user had activity
+        startDate:
+          type: string
+          description: The earliest date included in the range (YYYY-MM-DD)
+        endDate:
+          type: string
+          description: The latest date included in the range (YYYY-MM-DD)
+      required:
+        - dates
+        - startDate
+        - endDate
+    LearnProgressList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LearnProgressItem"
+      required:
+        - items
+    DeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        sessionId:
+          type: string
+      required:
+        - success
+        - sessionId
+    CertificateRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        userName:
+          type: string
+        language:
+          type: string
+        topic:
+          type: string
+        issuedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - userName
+        - language
+        - topic
+        - issuedAt
+    CertificateList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CertificateRecord"
+      required:
+        - items
+    CreateCertificateRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        userName:
+          type: string
+        language:
+          type: string
+        topic:
+          type: string
+      required:
+        - userId
+        - language
+        - topic
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message
