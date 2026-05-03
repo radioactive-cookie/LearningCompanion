@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth } from "@/lib/auth";
 
 function stripMarkdown(text: string): string {
   return text

@@ -4,6 +4,7 @@
  * Validates all required environment variables before starting.
  * Secrets (API keys, DB credentials) live only here — never in the frontend.
  */
+import "dotenv/config";
 import { env } from "./lib/env";
 import app from "./app";
 import { logger } from "./lib/logger";

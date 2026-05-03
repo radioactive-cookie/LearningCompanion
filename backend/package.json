@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
+    "dev": "cross-env NODE_ENV=development pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -15,10 +15,12 @@
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
+    "dotenv": "^16.6.1",
     "drizzle-orm": "catalog:",
     "express": "^5",
     "groq-sdk": "^0.9.1",
     "helmet": "^8.0.0",
+    "jose": "^5.5.2",
     "openid-client": "^6.8.4",
     "pino": "^9",
     "pino-http": "^10"
@@ -29,6 +31,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "catalog:",
+    "cross-env": "^10.1.0",
     "esbuild": "^0.27.3",
     "esbuild-plugin-pino": "^2.3.3",
     "pino-pretty": "^13",

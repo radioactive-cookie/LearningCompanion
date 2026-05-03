@@ -42,5 +42,11 @@ export const env = {
   /** Replit-injected public domain(s) — used as CORS fallback. */
   REPLIT_DOMAINS: optionalEnv("REPLIT_DOMAINS"),
 
+  /** Supabase project URL used to validate JWTs. */
+  SUPABASE_URL: requireEnv("SUPABASE_URL"),
+
+  /** Supabase JWT audience. Defaults to "authenticated". */
+  SUPABASE_JWT_AUD: optionalEnv("SUPABASE_JWT_AUD", "authenticated"),
+
   NODE_ENV: optionalEnv("NODE_ENV", "development"),
 } as const;

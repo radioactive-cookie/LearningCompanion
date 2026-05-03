@@ -18,7 +18,7 @@ import { IdePage } from "@/pages/ide";
 import NotFound from "@/pages/not-found";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { useGetAiUsage, getGetAiUsageQueryKey } from "@workspace/api-client-react";
-import { useAuth } from "@workspace/replit-auth-web";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import { AnimatePresence, motion } from "framer-motion";
 import brandIcon from "@assets/neural-network_1777788855132.png";
 
@@ -359,12 +359,14 @@ function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="learning-companion-theme">
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

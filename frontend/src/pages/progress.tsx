@@ -34,7 +34,7 @@ import {
   getListCertificatesQueryKey,
 } from "@workspace/api-client-react";
 import type { LearnProgressItem, CertificateRecord } from "@workspace/api-client-react";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth } from "@/lib/auth";
 
 const TOTAL_LEVELS = 5;
 

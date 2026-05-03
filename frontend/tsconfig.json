@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../tsconfig.base.json",
   "include": ["src/**/*"],
   "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
@@ -16,13 +16,13 @@
   },
   "references": [
     {
-      "path": "../../lib/api-client-react"
+      "path": "../lib/api-client-react"
     },
     {
-      "path": "../../lib/integrations-openai-ai-react"
+      "path": "../lib/integrations-openai-ai-react"
     },
     {
-      "path": "../../lib/replit-auth-web"
+      "path": "../lib/replit-auth-web"
     }
   ]
 }

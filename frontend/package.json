@@ -78,6 +78,7 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "@supabase/supabase-js": "^2.105.1",
     "html2canvas": "^1.4.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"

@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
 
 function GoogleIcon() {
   return (
@@ -13,8 +14,15 @@ function GoogleIcon() {
 }
 
 export function SignIn() {
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [email, setEmail] = useState("");
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setLocation("/");
+    }
+  }, [isAuthenticated, setLocation]);
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#09090b] px-4 relative overflow-hidden">

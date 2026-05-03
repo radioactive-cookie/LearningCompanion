@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist/public"
+      }
+    }
+  ],
+  "installCommand": "npm i -g pnpm@10.33.2 && pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm -C frontend build",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://YOUR_RENDER_BACKEND.onrender.com/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

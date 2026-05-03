@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: learning-companion-api
+    env: node
+    buildCommand: npm i -g pnpm@10.33.2 && pnpm install --frozen-lockfile && pnpm -C backend build
+    startCommand: node --enable-source-maps backend/dist/index.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_API_KEY_BACKUP
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_JWT_AUD
+        value: authenticated
+      - key: FRONTEND_ORIGIN
+        value: https://YOUR_VERCEL_DOMAIN.vercel.app
