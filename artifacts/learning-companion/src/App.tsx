@@ -19,6 +19,7 @@ import NotFound from "@/pages/not-found";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { useGetAiUsage, getGetAiUsageQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@workspace/replit-auth-web";
+import brandIcon from "@assets/artificial-intelligence_1777788302253.png";
 
 // ---------------------------------------------------------------------------
 // AI Usage Indicator
@@ -242,8 +243,8 @@ function Layout({ children }: { children: React.ReactNode }) {
         <div className="p-6">
           <Link href="/">
             <div className="flex items-center gap-3 cursor-pointer text-sidebar-foreground group" data-testid="link-home">
-              <div className="bg-primary text-primary-foreground p-2 rounded-lg group-hover:bg-accent group-hover:text-accent-foreground transition-colors">
-                <Code2 className="w-5 h-5" />
+              <div className="bg-white p-1.5 rounded-lg border border-border/50 shadow-sm group-hover:shadow transition-shadow">
+                <img src={brandIcon} alt="Companion" className="w-5 h-5 object-contain" />
               </div>
               <span className="font-semibold tracking-tight text-lg">Companion</span>
             </div>
