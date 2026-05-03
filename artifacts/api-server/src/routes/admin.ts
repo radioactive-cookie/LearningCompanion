@@ -6,6 +6,9 @@ import {
   getSessionId,
   getSession,
   updateSession,
+  createSession,
+  SESSION_COOKIE,
+  SESSION_TTL,
 } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -104,6 +107,66 @@ router.get("/admin/status", async (req: Request, res: Response) => {
     displayName: [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" ") || email,
     email,
   });
+});
+
+// POST /api/admin/login-direct — email + password login (no OAuth required)
+router.post("/admin/login-direct", async (req: Request, res: Response) => {
+  const { email, password } = req.body ?? {};
+  if (!email || !password) {
+    res.status(400).json({ error: "Email and password are required" });
+    return;
+  }
+
+  const normalizedEmail = String(email).toLowerCase().trim();
+
+  // Check if email is a registered admin
+  const adminCount = await getAdminCount();
+  const bootstrapMode = adminCount === 0;
+  const emailOk = bootstrapMode || await isAdminEmail(normalizedEmail);
+  if (!emailOk) {
+    res.status(401).json({ error: "Invalid email or password" });
+    return;
+  }
+
+  // Verify password
+  const hash = await getPasswordHash();
+  if (!hash) {
+    res.status(401).json({ error: "No admin password set. Use the setup endpoint first." });
+    return;
+  }
+  const passwordOk = await bcrypt.compare(String(password), hash);
+  if (!passwordOk) {
+    res.status(401).json({ error: "Invalid email or password" });
+    return;
+  }
+
+  // Bootstrap: register first admin
+  if (bootstrapMode) {
+    await db.insert(adminEmailsTable).values({ email: normalizedEmail }).onConflictDoNothing();
+  }
+
+  // Create session with synthetic user (no OAuth)
+  const sid = await createSession({
+    user: {
+      id: `admin:${normalizedEmail}`,
+      email: normalizedEmail,
+      firstName: null,
+      lastName: null,
+      profileImageUrl: null,
+    },
+    access_token: "admin-direct",
+    adminVerified: true,
+  });
+
+  res.cookie(SESSION_COOKIE, sid, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: SESSION_TTL,
+    path: "/",
+  });
+
+  res.json({ success: true });
 });
 
 // POST /api/admin/setup-password — set password for the first time (only if none set yet)

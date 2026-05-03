@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Plus, Trash2, LogOut, Key, UserCheck, AlertTriangle, CheckCircle, Loader2, Lock } from "lucide-react";
+import { Shield, Plus, Trash2, LogOut, AlertTriangle, CheckCircle, Loader2, Eye, EyeOff } from "lucide-react";
 
 interface AdminStatus {
   isAuthenticated: boolean;
@@ -27,60 +27,82 @@ async function apiFetch(path: string, options?: RequestInit) {
   return res;
 }
 
-// ── Step indicators ────────────────────────────────────────────────────────────
-function Steps({ step }: { step: 1 | 2 }) {
-  const steps = [
-    { label: "Login", icon: UserCheck },
-    { label: "Dashboard", icon: Shield },
-  ];
-  return (
-    <div className="flex items-center gap-2 mb-8">
-      {steps.map((s, i) => {
-        const n = i + 1;
-        const active = step === n;
-        const done = step > n;
-        const Icon = s.icon;
-        return (
-          <div key={n} className="flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${done ? "bg-emerald-500/20 text-emerald-400" : active ? "bg-white/10 text-white" : "bg-white/5 text-white/30"}`}>
-              <Icon className="w-3 h-3" />
-              {s.label}
-            </div>
-            {i < 1 && <div className={`w-8 h-px ${step > n ? "bg-emerald-500/40" : "bg-white/10"}`} />}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+// ── Login form ─────────────────────────────────────────────────────────────────
+function LoginForm({ onSuccess }: { onSuccess: () => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-// ── Step 1: Login ──────────────────────────────────────────────────────────────
-function LoginStep() {
-  const handleLogin = () => {
-    window.location.href = `${BASE}/api/login?returnTo=/admin`;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!email.trim() || !password) return;
+    setLoading(true);
+    const res = await apiFetch("/api/admin/login-direct", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim(), password }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      onSuccess();
+    } else {
+      setError(data.error ?? "Login failed");
+    }
+    setLoading(false);
   };
 
   return (
-    <div className="text-center">
+    <div>
       <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-5">
         <Shield className="w-7 h-7 text-white/60" />
       </div>
-      <h2 className="text-xl font-semibold text-white mb-2">Admin Access</h2>
-      <p className="text-sm text-white/40 mb-7">
-        Sign in with your authorized account to continue
-      </p>
-      <button
-        onClick={handleLogin}
-        className="w-full flex items-center justify-center gap-3 bg-[#1e1e20] hover:bg-[#28282a] border border-white/[0.12] text-white text-[15px] font-medium rounded-xl px-4 py-3.5 transition-all duration-150 hover:border-white/20"
-      >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <path d="M17.64 9.2045C17.64 8.5663 17.5827 7.9527 17.4764 7.3636H9V10.845H13.8436C13.635 11.97 13.0009 12.9231 12.0477 13.5613V15.8195H14.9564C16.6582 14.2527 17.64 11.9454 17.64 9.2045Z" fill="#4285F4"/>
-          <path d="M9 18C11.43 18 13.4673 17.1941 14.9564 15.8195L12.0477 13.5613C11.2418 14.1013 10.2109 14.4204 9 14.4204C6.65591 14.4204 4.67182 12.8372 3.96409 10.71H0.957275V13.0418C2.43818 15.9831 5.48182 18 9 18Z" fill="#34A853"/>
-          <path d="M3.96409 10.71C3.78409 10.17 3.68182 9.5931 3.68182 9C3.68182 8.4069 3.78409 7.83 3.96409 7.29V4.9582H0.957275C0.347727 6.1731 0 7.5477 0 9C0 10.4523 0.347727 11.8268 0.957275 13.0418L3.96409 10.71Z" fill="#FBBC05"/>
-          <path d="M9 3.5795C10.3214 3.5795 11.5077 4.0336 12.4405 4.9254L15.0218 2.344C13.4632 0.891818 11.4259 0 9 0C5.48182 0 2.43818 2.01682 0.957275 4.9582L3.96409 7.29C4.67182 5.1627 6.65591 3.5795 9 3.5795Z" fill="#EA4335"/>
-        </svg>
-        Continue with Google
-      </button>
+      <h2 className="text-xl font-semibold text-white mb-1 text-center">Admin Login</h2>
+      <p className="text-sm text-white/40 mb-7 text-center">Enter your admin email and password</p>
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="admin@example.com"
+          required
+          className="w-full bg-white/[0.05] border border-white/[0.10] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-colors"
+        />
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Password"
+            required
+            className="w-full bg-white/[0.05] border border-white/[0.10] rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-colors"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(v => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+            {error}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || !email.trim() || !password}
+          className="w-full bg-white text-black text-sm font-semibold rounded-xl px-4 py-3 mt-1 transition-all hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign In"}
+        </button>
+      </form>
     </div>
   );
 }
@@ -425,8 +447,7 @@ export function AdminPage() {
 
   useEffect(() => { fetchStatus(); }, []);
 
-  // Authenticated + admin email → step 2 (dashboard). Not authenticated → step 1 (login).
-  const step: 1 | 2 = !status?.isAuthenticated || !status?.isAdminEmail ? 1 : 2;
+  const showDashboard = status?.isAuthenticated && status?.isAdminEmail;
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#09090b] px-4 relative overflow-hidden">
@@ -448,39 +469,17 @@ export function AdminPage() {
             <Loader2 className="w-7 h-7 text-white/30 animate-spin" />
           </div>
         ) : (
-          <>
-            <Steps step={step} />
-
-            <div className="bg-[#131314] border border-white/[0.08] rounded-2xl p-7 shadow-2xl shadow-black/60">
-              {step === 1 && !status?.isAuthenticated && <LoginStep />}
-
-              {step === 1 && status?.isAuthenticated && !status?.isAdminEmail && (
-                <div className="text-center py-4">
-                  <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
-                    <AlertTriangle className="w-6 h-6 text-red-400" />
-                  </div>
-                  <h2 className="text-base font-semibold text-white mb-2">Access Denied</h2>
-                  <p className="text-sm text-white/40 mb-5">
-                    <span className="text-white/60">{status.email}</span> is not authorized as an admin.
-                  </p>
-                  <button
-                    onClick={() => { window.location.href = `${BASE}/api/logout`; }}
-                    className="text-sm text-white/30 hover:text-white/60 transition-colors"
-                  >
-                    Sign out and try a different account
-                  </button>
-                </div>
-              )}
-
-              {step === 2 && (
-                <Dashboard
-                  email={status!.email!}
-                  displayName={status!.displayName!}
-                  onLogout={fetchStatus}
-                />
-              )}
-            </div>
-          </>
+          <div className="bg-[#131314] border border-white/[0.08] rounded-2xl p-7 shadow-2xl shadow-black/60">
+            {showDashboard ? (
+              <Dashboard
+                email={status!.email!}
+                displayName={status!.displayName!}
+                onLogout={fetchStatus}
+              />
+            ) : (
+              <LoginForm onSuccess={fetchStatus} />
+            )}
+          </div>
         )}
       </div>
 
