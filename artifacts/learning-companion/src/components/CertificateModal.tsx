@@ -3,7 +3,7 @@ import { X, Download, Link2, Check, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { CertificateRecord } from "@workspace/api-client-react";
-import certBrand from "@assets/image_1777789199022.png";
+import certBrand from "@assets/image_1777789320457.png";
 
 // ---------------------------------------------------------------------------
 // Language meta — icons + display labels
