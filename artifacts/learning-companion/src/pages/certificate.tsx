@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetCertificate } from "@workspace/api-client-react";
 import type { CertificateRecord } from "@workspace/api-client-react";
-import certBrand from "@assets/image_1777789320457.png";
+import certBrand from "@assets/neural-network_1777789423317.png";
 
 // ---------------------------------------------------------------------------
 // Language meta
