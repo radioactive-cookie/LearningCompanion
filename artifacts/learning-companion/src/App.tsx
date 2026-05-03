@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { MessageSquare, History, Moon, Sun, Code2, Trophy, Zap, Key, LogIn, LogOut, User } from "lucide-react";
+import { MessageSquare, History, Moon, Sun, Code2, Trophy, Zap, Key, LogIn, LogOut, User, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import { Progress } from "@/pages/progress";
 import { CertificatePage } from "@/pages/certificate";
 import { SignIn } from "@/pages/sign-in";
 import { AdminPage } from "@/pages/admin";
+import { IdePage } from "@/pages/ide";
 import NotFound from "@/pages/not-found";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { useGetAiUsage, getGetAiUsageQueryKey } from "@workspace/api-client-react";
@@ -233,6 +234,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   const isLearnActive = location === "/learn" || location.startsWith("/learn");
   const isChatActive = location === "/chat";
   const isProgressActive = location === "/progress";
+  const isIdeActive = location === "/ide";
 
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
@@ -285,6 +287,15 @@ function Layout({ children }: { children: React.ReactNode }) {
               <span>My Progress</span>
             </div>
           </Link>
+          <Link href="/ide">
+            <div
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer transition-colors ${isIdeActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50"}`}
+              data-testid="nav-ide"
+            >
+              <Terminal className="w-4 h-4" />
+              <span>Coding IDE</span>
+            </div>
+          </Link>
         </div>
 
         <div className="mt-auto">
@@ -335,6 +346,9 @@ function Router() {
       </Route>
       <Route path="/progress">
         <Layout><Progress /></Layout>
+      </Route>
+      <Route path="/ide">
+        <Layout><IdePage /></Layout>
       </Route>
       <Route path="/certificate/:id" component={CertificatePage} />
       <Route component={NotFound} />
