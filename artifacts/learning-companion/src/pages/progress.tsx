@@ -285,12 +285,12 @@ function CertMiniCard({ cert }: { cert: CertificateRecord }) {
 
 function StatCard({ label, value, sub, icon: Icon, color }: { label: string; value: number; sub: string; icon: React.ElementType; color: string }) {
   return (
-    <div className="flex items-center gap-3 p-4 rounded-xl border border-border/50 bg-card">
-      <div className={`p-2 rounded-lg ${color} shrink-0`}><Icon className="w-4 h-4" /></div>
+    <div className="flex flex-col gap-3 p-4 rounded-xl border border-border/50 bg-card hover:shadow-sm hover:-translate-y-px transition-all duration-200">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color} shrink-0`}><Icon className="w-4 h-4" /></div>
       <div>
-        <p className="text-2xl font-bold text-foreground leading-tight">{value}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-[10px] text-muted-foreground/60 mt-0.5">{sub}</p>
+        <p className="text-3xl font-extrabold text-foreground leading-none tabular-nums">{value}</p>
+        <p className="text-xs font-semibold text-foreground/80 mt-1">{label}</p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>
       </div>
     </div>
   );
@@ -368,10 +368,10 @@ export function Progress() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="px-6 py-4 border-b border-border/40 flex items-center gap-3 sticky top-0 bg-background z-10">
+      <div className="px-6 py-3.5 border-b border-border/40 flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="p-2 rounded-lg bg-primary/10 text-primary"><Trophy className="w-4 h-4" /></div>
         <div className="flex-1">
-          <h1 className="text-base font-bold text-foreground leading-tight">My Progress</h1>
+          <h1 className="text-sm font-bold text-foreground leading-tight tracking-tight">My Progress</h1>
           <p className="text-xs text-muted-foreground">All topics you've started or mastered</p>
         </div>
         {isAuthenticated && !isLoading && (

@@ -251,52 +251,31 @@ function Layout({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
-        <div className="flex-1 px-4 py-2 space-y-1">
-          <Link href="/chat">
-            <div
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer transition-colors ${isChatActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50"}`}
-              data-testid="nav-chat"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>New Chat</span>
-            </div>
-          </Link>
-          <Link href="/history">
-            <div
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer transition-colors ${isHistoryActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50"}`}
-              data-testid="nav-history"
-            >
-              <History className="w-4 h-4" />
-              <span>History</span>
-            </div>
-          </Link>
-          <Link href="/learn">
-            <div
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer transition-colors ${isLearnActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50"}`}
-              data-testid="nav-learn"
-            >
-              <Code2 className="w-4 h-4" />
-              <span>Learn to Code</span>
-            </div>
-          </Link>
-          <Link href="/progress">
-            <div
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer transition-colors ${isProgressActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50"}`}
-              data-testid="nav-progress"
-            >
-              <Trophy className="w-4 h-4" />
-              <span>My Progress</span>
-            </div>
-          </Link>
-          <Link href="/ide">
-            <div
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer transition-colors ${isIdeActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50"}`}
-              data-testid="nav-ide"
-            >
-              <Terminal className="w-4 h-4" />
-              <span>Coding IDE</span>
-            </div>
-          </Link>
+        <div className="flex-1 px-3 py-2 space-y-0.5">
+          {([
+            { href: "/chat",     active: isChatActive,     icon: MessageSquare, label: "New Chat",     testId: "nav-chat"     },
+            { href: "/history",  active: isHistoryActive,  icon: History,       label: "History",      testId: "nav-history"  },
+            { href: "/learn",    active: isLearnActive,    icon: Code2,         label: "Learn to Code",testId: "nav-learn"    },
+            { href: "/progress", active: isProgressActive, icon: Trophy,        label: "My Progress",  testId: "nav-progress" },
+            { href: "/ide",      active: isIdeActive,      icon: Terminal,      label: "Coding IDE",   testId: "nav-ide"      },
+          ] as const).map(({ href, active, icon: Icon, label, testId }) => (
+            <Link key={href} href={href}>
+              <div
+                className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150 text-sm
+                  ${active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-sm"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground font-medium"
+                  }`}
+                data-testid={testId}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-sidebar-primary" />
+                )}
+                <Icon className={`w-4 h-4 shrink-0 ${active ? "text-sidebar-primary" : ""}`} />
+                <span>{label}</span>
+              </div>
+            </Link>
+          ))}
         </div>
 
         <div className="mt-auto">

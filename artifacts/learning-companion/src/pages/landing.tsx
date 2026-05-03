@@ -84,7 +84,7 @@ export function Landing() {
 
       {/* Hero */}
       <main className="flex-1 flex flex-col">
-        <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-20 relative">
+        <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-20 relative page-fade-in">
           {/* Background glow */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
             <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
@@ -96,14 +96,14 @@ export function Landing() {
               AI-powered · 4-level progression · 12 languages
             </Badge>
 
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground leading-[1.08]">
-              Your AI{" "}
-              <span className="text-primary">Coding</span>
-              {" "}Mentor
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.08]">
+              <span className="text-foreground">Your AI </span>
+              <span className="bg-gradient-to-r from-primary via-teal-500 to-primary bg-clip-text text-transparent dark:from-amber-400 dark:via-yellow-300 dark:to-amber-400">Coding</span>
+              <span className="text-foreground"> Mentor</span>
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground max-w-xl leading-relaxed">
-              Learn any programming language through a structured 4-level progression —
+              Learn any programming language through a structured 5-level progression —
               from first concepts to real-world challenges. All content generated fresh by AI,
               just for you.
             </p>
@@ -111,17 +111,17 @@ export function Landing() {
             <div className="flex flex-col sm:flex-row items-center gap-3 mt-2">
               <Button
                 size="lg"
-                className="h-12 px-8 text-base font-semibold gap-2 shadow-sm"
+                className="h-13 px-9 text-base font-semibold gap-2 shadow-md transition-all duration-150 active:scale-[0.98]"
                 onClick={() => navigate("/learn")}
                 data-testid="btn-start-learning"
               >
-                Start Learning
+                Start Learning Free
                 <ChevronRight className="w-4 h-4" />
               </Button>
               <Button
                 variant="outline"
                 size="lg"
-                className="h-12 px-8 text-base gap-2"
+                className="h-13 px-8 text-base gap-2 transition-all duration-150 active:scale-[0.98]"
                 onClick={() => navigate("/chat")}
                 data-testid="btn-open-chat"
               >
@@ -131,11 +131,11 @@ export function Landing() {
             </div>
 
             {/* Language pills */}
-            <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-lg">
+            <div className="flex flex-wrap justify-center gap-1.5 mt-4 max-w-lg">
               {LANGUAGES.map((lang) => (
                 <span
                   key={lang}
-                  className="text-xs px-2.5 py-1 rounded-full border border-border/50 text-muted-foreground bg-muted/30"
+                  className="text-xs px-2.5 py-1 rounded-full border border-border/60 text-muted-foreground bg-background hover:border-primary/30 hover:text-foreground transition-colors duration-150 cursor-default"
                 >
                   {lang}
                 </span>
@@ -155,13 +155,14 @@ export function Landing() {
               {FEATURES.map((f, i) => {
                 const Icon = f.icon;
                 return (
-                  <div key={i} className="p-5 rounded-2xl border border-border/50 bg-card flex flex-col gap-3 hover:shadow-sm transition-shadow">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${f.color}`}>
+                  <div key={i} className="relative p-5 rounded-2xl border border-border/50 bg-card flex flex-col gap-3 hover:shadow-md hover:-translate-y-px transition-all duration-200 overflow-hidden">
+                    <div className="absolute top-3 right-4 text-[42px] font-black text-muted/20 leading-none select-none tabular-nums">{i + 1}</div>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${f.color} shadow-sm`}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="font-semibold text-sm text-foreground">Level {i + 1} — {f.title}</p>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{f.desc}</p>
+                      <p className="font-bold text-sm text-foreground">{f.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{f.desc}</p>
                     </div>
                   </div>
                 );

@@ -125,12 +125,15 @@ function LanguageCard({ lang, isSelected, onClick }: { lang: Language; isSelecte
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-150 text-sm font-medium
-        ${isSelected ? "border-primary bg-primary/10 text-primary shadow-sm scale-[1.02]" : `${lang.color} border`}`}
+      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-150 text-sm font-medium group
+        ${isSelected
+          ? "border-primary bg-primary/10 text-primary shadow-sm scale-[1.03] ring-1 ring-primary/20"
+          : `${lang.color} border hover:scale-[1.02] hover:shadow-sm`
+        }`}
       data-testid={`lang-${lang.id}`}
     >
-      <span className="text-xl leading-none">{lang.icon}</span>
-      <span className="text-xs">{lang.label}</span>
+      <span className="text-xl leading-none transition-transform duration-150 group-hover:scale-110 group-active:scale-95">{lang.icon}</span>
+      <span className="text-xs leading-tight">{lang.label}</span>
     </button>
   );
 }
@@ -166,7 +169,7 @@ function TopicCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left p-4 rounded-xl border bg-card hover:shadow-sm transition-all duration-150 group
+      className={`w-full text-left p-4 rounded-xl border bg-card hover:shadow-md hover:-translate-y-px transition-all duration-200 group
         ${isMastered
           ? "border-green-500/30 hover:border-green-500/50"
           : completedCount > 0
@@ -418,8 +421,8 @@ function LessonView({
   return (
     <div className="flex-1 overflow-y-auto flex flex-col animate-in fade-in duration-200">
       {/* Top bar */}
-      <div className="px-6 py-3 border-b border-border/40 flex items-center gap-3 sticky top-0 bg-background z-10">
-        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground -ml-2" onClick={onBack}>
+      <div className="px-6 py-3 border-b border-border/40 flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur-sm z-10">
+        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground -ml-2 transition-all duration-150 hover:bg-muted/60" onClick={onBack}>
           <ArrowLeft className="w-4 h-4" />
           Back
         </Button>
@@ -911,10 +914,10 @@ export function Learn() {
   // ------------------------------------------------------------------
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="px-6 py-4 border-b border-border/40 flex items-center gap-3 sticky top-0 bg-background z-10">
+      <div className="px-6 py-3.5 border-b border-border/40 flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="p-2 rounded-lg bg-primary/10 text-primary"><Code2 className="w-4 h-4" /></div>
         <div>
-          <h1 className="text-base font-bold text-foreground leading-tight">Learn to Code</h1>
+          <h1 className="text-sm font-bold text-foreground leading-tight tracking-tight">Learn to Code</h1>
           <p className="text-xs text-muted-foreground">Choose a language, difficulty, and topic to get started</p>
         </div>
         {completedByTopic.size > 0 && (

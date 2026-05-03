@@ -497,7 +497,7 @@ export function Chat() {
       )}
 
       {/* ── Top bar ──────────────────────────────────────────────────── */}
-      <header className="px-5 py-3 flex items-center justify-between shrink-0 border-b border-border/40">
+      <header className="px-5 py-3 flex items-center justify-between shrink-0 border-b border-border/40 bg-background/95 backdrop-blur-sm">
 
         {/* Left: LearningCompanion brand */}
         <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
@@ -588,17 +588,19 @@ export function Chat() {
               </h1>
 
               {/* Quick-action chips */}
-              <div className="flex flex-wrap justify-center gap-2">
+              <div className="grid grid-cols-2 gap-2.5 w-full max-w-md">
                 {QUICK_ACTIONS.map((action) => {
                   const Icon = action.icon;
                   return (
                     <button
                       key={action.label}
                       onClick={() => handleSubmit(undefined, action.prompt)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-card hover:border-primary/40 hover:bg-accent transition-all text-sm text-foreground"
+                      className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm transition-all duration-150 text-sm text-foreground text-left group"
                     >
-                      <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                      {action.label}
+                      <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-muted/60 group-hover:bg-primary/10 transition-colors shrink-0">
+                        <Icon className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </span>
+                      <span className="font-medium text-xs">{action.label}</span>
                     </button>
                   );
                 })}

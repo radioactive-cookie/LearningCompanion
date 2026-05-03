@@ -610,7 +610,7 @@ export function IdePage() {
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* ── Toolbar ── */}
-      <div className="px-4 py-2 border-b border-border/40 flex items-center gap-2 shrink-0 bg-background">
+      <div className="px-4 py-2.5 border-b border-border/40 flex items-center gap-2 shrink-0 bg-background/95 backdrop-blur-sm">
         <div className="flex items-center gap-2 shrink-0">
           <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
             <Code2 className="w-4 h-4" />
