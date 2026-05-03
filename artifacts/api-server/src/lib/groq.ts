@@ -270,6 +270,46 @@ export async function callAIFast(
 }
 
 /**
+ * Like callAIFast but forces Groq's JSON-object response_format, guaranteeing
+ * the reply is always valid JSON (no truncation artifacts, no markdown fences).
+ * Use this whenever the output MUST be parseable JSON.
+ * The system prompt MUST include the word "json" (Groq requirement).
+ */
+export async function callAIFastJson(
+  systemPrompt: string,
+  messages: ConversationMessage[],
+  maxTokens: number = 2048,
+): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const client = getPrimaryClient();
+    const completion = await client.chat.completions.create(
+      {
+        model: MODEL_FAST,
+        max_tokens: maxTokens,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages,
+        ],
+      },
+      { signal: controller.signal },
+    );
+    const text = completion.choices[0]?.message?.content?.trim();
+    if (!text) throw new Error("Groq returned an empty response.");
+    return sanitizeOutput(text);
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("AI request timed out. Please try again.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
  * Try a single key. On 429, records the block window and re-throws.
  */
 async function tryKey(

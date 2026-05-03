@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { callAIFast } from "../lib/groq";
+import { callAIFast, callAIFastJson } from "../lib/groq";
 import { getFundamentalsLesson } from "../data/fundamentalsLessons";
 
 const router = Router();
@@ -53,16 +53,59 @@ const LEVEL_META = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Parse a raw AI string into a LessonPayload, returning null if invalid. */
+/**
+ * Extract a string field from a parsed JSON object, trying multiple common key variants.
+ * Handles camelCase, snake_case, and nested "lesson" wrapper objects.
+ */
+function extractField(obj: Record<string, unknown>, ...keys: string[]): string {
+  for (const key of keys) {
+    const val = obj[key];
+    if (typeof val === "string" && val.trim()) return val.trim();
+  }
+  return "";
+}
+
+/**
+ * Parse a structured-text AI response (EXPLANATION / CODE / TASK / HINT sections).
+ * This format avoids JSON escaping issues with code that contains quotes or backticks.
+ */
+function parseLessonText(raw: string, level: number, meta: typeof LEVEL_META[0]): LessonPayload | null {
+  // Each section runs until the next labelled section or end of string
+  const section = (label: string) => {
+    const pattern = new RegExp(`(?:^|\\n)${label}:?\\s*([\\s\\S]+?)(?=\\n(?:EXPLANATION|CODE|TASK|HINT):?[\\s\\n]|$)`, "i");
+    return raw.match(pattern)?.[1]?.trim() ?? "";
+  };
+
+  // Strip markdown code fences from the code block
+  const rawCode = section("CODE");
+  const codeExample = rawCode.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/i, "").trim();
+
+  const explanation = section("EXPLANATION");
+  const task = section("TASK");
+  const hint = section("HINT");
+
+  if (!explanation || !task) return null;
+  return { level, totalLevels: TOTAL_LEVELS, levelTitle: meta.title, explanation, codeExample, task, hint };
+}
+
+/** Parse a raw JSON AI response into a LessonPayload, returning null if invalid. */
 function parseLessonJson(raw: string, level: number, meta: typeof LEVEL_META[0]): LessonPayload | null {
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
   if (!jsonMatch) return null;
   try {
-    const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-    const explanation = typeof parsed.explanation === "string" ? parsed.explanation.trim() : "";
-    const codeExample = typeof parsed.codeExample === "string" ? parsed.codeExample.trim() : "";
-    const task = typeof parsed.task === "string" ? parsed.task.trim() : "";
-    const hint = typeof parsed.hint === "string" ? parsed.hint.trim() : "";
+    let parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+
+    // Some models wrap everything in a "lesson" key
+    if (typeof parsed.lesson === "object" && parsed.lesson !== null) {
+      parsed = parsed.lesson as Record<string, unknown>;
+    }
+
+    // Accept camelCase OR snake_case field names
+    const explanation = extractField(parsed, "explanation", "Explanation");
+    const codeExample = extractField(parsed, "codeExample", "code_example", "code", "example", "codeExamples", "Code_Example");
+    const task = extractField(parsed, "task", "Task", "coding_task", "challenge");
+    const hint = extractField(parsed, "hint", "Hint", "tip", "Tip");
+
     if (!explanation || !task) return null;
     return { level, totalLevels: TOTAL_LEVELS, levelTitle: meta.title, explanation, codeExample, task, hint };
   } catch {
@@ -201,38 +244,54 @@ router.post("/lesson", async (req, res) => {
     return;
   }
 
-  // Compact prompt that fits comfortably within 2048 tokens output
-  const systemPrompt = `You are an expert coding instructor. Respond ONLY with a valid JSON object — no markdown, no code fences, no extra text before or after the JSON.
+  // Use a structured-text format instead of JSON to avoid escaping issues with code examples.
+  // Code blocks in JSON are fragile (the model uses triple-quotes, unescaped newlines, etc.).
+  // Plain sections are parsed reliably with regex and never fail due to JSON invalidity.
+  const systemPrompt = `You are an expert coding instructor. Respond using EXACTLY these four labelled sections, in this order. Do not add any other text.
 
-Required JSON keys:
-- "explanation": 3-6 clear sentences. ${meta.focus}
-- "codeExample": working ${lang} code snippet (5-12 lines). Just the code.
-- "task": specific coding task for the learner (2-3 sentences). Level ${level}/${TOTAL_LEVELS}.
-- "hint": one practical tip without giving away the answer (1 sentence).`;
+EXPLANATION:
+${meta.focus} Write 3-6 sentences in plain English. Use **bold** for key terms. No code in this section.
 
-  const userMsg = `Topic: "${topicClean}" | Language: ${lang} | Difficulty: ${diff} | Level ${level}/${TOTAL_LEVELS} (${meta.title})`;
+CODE:
+\`\`\`${lang.toLowerCase()}
+[write a working ${lang} code example here, 5–15 lines]
+\`\`\`
 
-  // Try up to 2 times; on the second attempt use a shorter prompt to avoid truncation
+TASK:
+[write a specific hands-on coding task for the learner — 2-3 sentences, level ${level}/${TOTAL_LEVELS}]
+
+HINT:
+[write one practical tip that guides without giving the answer — 1 sentence]`;
+
+  const userMsg = `Topic: "${topicClean}" | Language: ${lang} | Difficulty: ${diff} | Level ${level}/${TOTAL_LEVELS} — ${meta.title}`;
+
   let result: LessonPayload | null = null;
 
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const promptToUse = attempt === 1 ? systemPrompt : `You are a coding instructor. Return ONLY JSON with keys: explanation, codeExample, task, hint. Topic: ${topicClean} in ${lang} (${diff}), Level ${level}: ${meta.title}. Be concise.`;
-      const raw = await callAIFast(promptToUse, [{ role: "user", content: userMsg }], 2048);
+  try {
+    const raw = await callAIFast(systemPrompt, [{ role: "user", content: userMsg }], 2048);
+    result = parseLessonText(raw, level, meta);
+    if (!result) {
+      req.log.warn({ raw: raw.slice(0, 600) }, "Structured text parse failed, trying JSON fallback");
       result = parseLessonJson(raw, level, meta);
-      if (result) break;
-      req.log.warn({ attempt }, "Lesson JSON parse failed, retrying");
-    } catch (err) {
-      req.log.warn({ err, attempt }, "Lesson generation attempt failed");
-      if (attempt === 2) break; // fall through to fallback
+    }
+  } catch (err) {
+    req.log.warn({ err }, "Primary lesson generation failed — retrying");
+    try {
+      const raw2 = await callAIFast(
+        `You are a coding instructor. Reply in exactly four sections labelled EXPLANATION, CODE, TASK, HINT. Topic: ${topicClean} in ${lang}, level ${level} — ${meta.title}.`,
+        [{ role: "user", content: userMsg }],
+        2048,
+      );
+      result = parseLessonText(raw2, level, meta) ?? parseLessonJson(raw2, level, meta);
+    } catch (err2) {
+      req.log.error({ err2 }, "Both lesson generation attempts failed");
     }
   }
 
   if (result) {
     res.json(result);
   } else {
-    // Return a helpful fallback so the user sees content instead of an error
-    req.log.error("Both lesson generation attempts failed — serving fallback");
+    req.log.error("Lesson generation failed — serving fallback");
     res.json(buildFallback(lang, topicClean, level, meta));
   }
 });
