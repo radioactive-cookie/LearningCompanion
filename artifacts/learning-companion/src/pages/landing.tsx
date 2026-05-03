@@ -13,7 +13,7 @@ import {
   Sun,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
-import brandIcon from "@assets/artificial-intelligence_1777788302253.png";
+import brandIcon from "@assets/image_1777788437108.png";
 
 const FEATURES = [
   {
