@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetCertificate } from "@workspace/api-client-react";
 import type { CertificateRecord } from "@workspace/api-client-react";
+import certBrand from "@assets/image_1777789199022.png";
 
 // ---------------------------------------------------------------------------
 // Language meta
@@ -93,8 +94,8 @@ function CertificateCard({ cert }: { cert: CertificateRecord }) {
           </div>
           <div className="text-center">
             <div className="flex items-center gap-1.5 justify-center">
-              <div className="w-5 h-5 rounded bg-gray-800 flex items-center justify-center">
-                <span className="text-white text-[8px] font-bold font-sans">&lt;/&gt;</span>
+              <div className="w-5 h-5 rounded bg-white flex items-center justify-center overflow-hidden border border-amber-100 shadow-sm">
+                <img src={certBrand} alt="Companion" className="w-3.5 h-3.5 object-contain" />
               </div>
               <span className="text-sm font-bold text-gray-800 font-sans tracking-tight">Companion</span>
             </div>

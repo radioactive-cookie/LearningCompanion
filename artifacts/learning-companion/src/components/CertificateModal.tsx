@@ -3,6 +3,7 @@ import { X, Download, Link2, Check, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { CertificateRecord } from "@workspace/api-client-react";
+import certBrand from "@assets/image_1777789199022.png";
 
 // ---------------------------------------------------------------------------
 // Language meta — icons + display labels
@@ -64,11 +65,15 @@ function CertificateCard({ cert, nameOverride }: { cert: CertificateRecord; name
       <div className="relative z-10 px-16 py-12 text-center">
         {/* Header */}
         <div className="flex items-center justify-center gap-3 mb-1">
-          <Award className="w-6 h-6 text-amber-500" />
+          <div className="w-7 h-7 rounded-full bg-white shadow-sm border border-amber-100 flex items-center justify-center overflow-hidden">
+            <img src={certBrand} alt="Companion" className="w-4 h-4 object-contain" />
+          </div>
           <p className="text-[11px] font-sans font-semibold tracking-[0.3em] text-amber-600 uppercase">
             Certificate of Completion
           </p>
-          <Award className="w-6 h-6 text-amber-500" />
+          <div className="w-7 h-7 rounded-full bg-white shadow-sm border border-amber-100 flex items-center justify-center overflow-hidden">
+            <img src={certBrand} alt="Companion" className="w-4 h-4 object-contain" />
+          </div>
         </div>
 
         <div className="my-3 h-px bg-gradient-to-r from-transparent via-amber-300 to-transparent" />
@@ -128,8 +133,8 @@ function CertificateCard({ cert, nameOverride }: { cert: CertificateRecord; name
           </div>
           <div className="text-center">
             <div className="flex items-center gap-1.5 justify-center">
-              <div className="w-5 h-5 rounded bg-gray-800 flex items-center justify-center">
-                <span className="text-white text-[8px] font-bold font-sans">&lt;/&gt;</span>
+              <div className="w-5 h-5 rounded bg-white flex items-center justify-center overflow-hidden border border-amber-100 shadow-sm">
+                <img src={certBrand} alt="Companion" className="w-3.5 h-3.5 object-contain" />
               </div>
               <span className="text-sm font-bold text-gray-800 font-sans tracking-tight">Companion</span>
             </div>
