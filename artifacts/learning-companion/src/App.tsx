@@ -13,6 +13,7 @@ import { Landing } from "@/pages/landing";
 import { Progress } from "@/pages/progress";
 import { CertificatePage } from "@/pages/certificate";
 import { SignIn } from "@/pages/sign-in";
+import { AdminPage } from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { useGetAiUsage, getGetAiUsageQueryKey } from "@workspace/api-client-react";
@@ -319,6 +320,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/sign-in" component={SignIn} />
+      <Route path="/admin" component={AdminPage} />
       <Route path="/chat">
         <Layout><Chat /></Layout>
       </Route>

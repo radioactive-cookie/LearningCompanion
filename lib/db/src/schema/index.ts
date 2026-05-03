@@ -4,3 +4,4 @@ export * from "./messages";
 export * from "./learnProgress";
 export * from "./streakActivity";
 export * from "./certificates";
+export * from "./admin";
