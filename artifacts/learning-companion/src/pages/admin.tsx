@@ -150,6 +150,20 @@ function PasswordStep({
     }
   };
 
+  const handleSkip = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await apiFetch("/api/admin/skip-verify", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error); setLoading(false); return; }
+      onVerified();
+    } catch {
+      setError("Network error. Try again.");
+      setLoading(false);
+    }
+  };
+
   if (checkingSetup) {
     return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 text-white/40 animate-spin" /></div>;
   }
@@ -215,6 +229,16 @@ function PasswordStep({
           {setupMode ? "Set password & enter" : "Enter dashboard"}
         </button>
       </form>
+
+      {setupMode && (
+        <button
+          onClick={handleSkip}
+          disabled={loading}
+          className="w-full mt-3 text-xs text-white/30 hover:text-white/60 transition-colors text-center py-2 disabled:opacity-50"
+        >
+          Skip for now — proceed without setting a password →
+        </button>
+      )}
     </div>
   );
 }

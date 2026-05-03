@@ -198,6 +198,46 @@ router.post("/admin/verify-password", async (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
+// POST /api/admin/skip-verify — skip password step (only when no password is set)
+router.post("/admin/skip-verify", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const email = req.user?.email;
+  if (!email) {
+    res.status(400).json({ error: "User has no email" });
+    return;
+  }
+
+  const adminCount = await getAdminCount();
+  const bootstrapMode = adminCount === 0;
+  if (!bootstrapMode && !(await isAdminEmail(email))) {
+    res.status(403).json({ error: "Not an admin" });
+    return;
+  }
+
+  const hash = await getPasswordHash();
+  if (hash) {
+    res.status(400).json({ error: "Password is configured — cannot skip verification" });
+    return;
+  }
+
+  // In bootstrap mode with no password set, register this user as first admin
+  if (bootstrapMode) {
+    await db.insert(adminEmailsTable).values({ email: email.toLowerCase() }).onConflictDoNothing();
+  }
+
+  const sid = getSessionId(req);
+  if (sid) {
+    const session = await getSession(sid);
+    if (session) await updateSession(sid, { ...session, adminVerified: true });
+  }
+
+  res.json({ success: true });
+});
+
 // POST /api/admin/logout — clear admin verification only
 router.post("/admin/logout", async (req: Request, res: Response) => {
   const sid = getSessionId(req);
