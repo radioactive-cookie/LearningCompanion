@@ -24,6 +24,8 @@ import {
   RotateCcw,
   GraduationCap,
   Award,
+  Search,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -629,6 +631,7 @@ export function Learn() {
   );
   const [customTopic, setCustomTopic] = useState("");
   const [activeTopic, setActiveTopic] = useState<string | null>(null);
+  const [topicSearch, setTopicSearch] = useState("");
 
   const [currentLevel, setCurrentLevel] = useState(1);
   const [completedByTopic, setCompletedByTopic] = useState<Map<string, Set<number>>>(new Map());
@@ -804,8 +807,8 @@ export function Learn() {
     loadLevel(activeTopic, level);
   };
 
-  const handleLanguageChange = (lang: Language) => { setSelectedLanguage(lang); handleBack(); };
-  const handleDifficultyChange = (d: GetLearnSuggestionsDifficulty) => { setSelectedDifficulty(d); handleBack(); };
+  const handleLanguageChange = (lang: Language) => { setSelectedLanguage(lang); handleBack(); setTopicSearch(""); };
+  const handleDifficultyChange = (d: GetLearnSuggestionsDifficulty) => { setSelectedDifficulty(d); handleBack(); setTopicSearch(""); };
 
   const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -828,6 +831,25 @@ export function Learn() {
     const key = topicKey(selectedLanguage.id, selectedDifficulty, topicTitle);
     return completedByTopic.get(key)?.size ?? 0;
   };
+
+  // Search filtering
+  const searchTerm = topicSearch.toLowerCase().trim();
+  const allSuggestions = suggestionsData?.suggestions ?? [];
+  const filteredSuggestions = searchTerm
+    ? allSuggestions.filter(
+        (s) =>
+          s.title.toLowerCase().includes(searchTerm) ||
+          s.description.toLowerCase().includes(searchTerm),
+      )
+    : allSuggestions;
+  const fundInfo = LANGUAGE_FUNDAMENTALS[selectedLanguage.id];
+  const showFundamentals =
+    selectedDifficulty === "beginner" &&
+    !!fundInfo &&
+    (!searchTerm ||
+      fundInfo.title.toLowerCase().includes(searchTerm) ||
+      fundInfo.description.toLowerCase().includes(searchTerm));
+  const noResults = searchTerm && !showFundamentals && filteredSuggestions.length === 0;
 
   // ------------------------------------------------------------------
   // Lesson view
@@ -958,8 +980,28 @@ export function Learn() {
         {/* RIGHT — Suggestions + progress info */}
         <div className="flex-1 p-5 flex flex-col gap-4 min-w-0">
 
-          {/* Pinned fundamentals course — beginners only */}
-          {selectedDifficulty === "beginner" && LANGUAGE_FUNDAMENTALS[selectedLanguage.id] && (
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={topicSearch}
+              onChange={(e) => setTopicSearch(e.target.value)}
+              placeholder={`Search topics for ${selectedLanguage.label}…`}
+              className="pl-8 pr-8 text-sm h-9"
+            />
+            {topicSearch && (
+              <button
+                onClick={() => setTopicSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Pinned fundamentals course — beginners only, filtered by search */}
+          {showFundamentals && (
             <div className="flex flex-col gap-2">
               <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <GraduationCap className="w-3.5 h-3.5 text-teal-500" />
@@ -976,9 +1018,11 @@ export function Learn() {
           <div className="flex items-center justify-between">
             <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
-              Suggested for {selectedLanguage.label} · {DIFFICULTIES.find(d => d.id === selectedDifficulty)?.label}
+              {searchTerm
+                ? `Results for "${topicSearch}"`
+                : `Suggested for ${selectedLanguage.label} · ${DIFFICULTIES.find(d => d.id === selectedDifficulty)?.label}`}
             </h2>
-            {!isLoadingSuggestions && (
+            {!isLoadingSuggestions && !searchTerm && (
               <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1 text-muted-foreground" onClick={() => refetchSuggestions()} data-testid="btn-refresh-suggestions">
                 <RefreshCw className="w-3 h-3" />
                 Refresh
@@ -993,10 +1037,28 @@ export function Learn() {
               Failed to load suggestions.{" "}
               <button className="underline text-primary" onClick={() => refetchSuggestions()}>Try again</button>
             </div>
+          ) : noResults ? (
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <div className="p-3 rounded-full bg-muted/50">
+                <Search className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">No topics match "{topicSearch}"</p>
+                <p className="text-xs text-muted-foreground mt-0.5">You can learn it anyway — just click below</p>
+              </div>
+              <Button
+                size="sm"
+                className="gap-1.5 mt-1"
+                onClick={() => { handleSelectTopic(topicSearch); setTopicSearch(""); }}
+              >
+                <Send className="w-3.5 h-3.5" />
+                Start learning "{topicSearch}"
+              </Button>
+            </div>
           ) : (
             <>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                {(suggestionsData?.suggestions ?? []).map((s) => (
+                {filteredSuggestions.map((s) => (
                   <TopicCard
                     key={s.id}
                     suggestion={s}

@@ -67,24 +67,28 @@ function extractField(obj: Record<string, unknown>, ...keys: string[]): string {
 
 /**
  * Parse a structured-text AI response (EXPLANATION / CODE / TASK / HINT sections).
- * This format avoids JSON escaping issues with code that contains quotes or backticks.
+ * Splits on section labels so partial responses (missing CODE / TASK / HINT) still work.
  */
 function parseLessonText(raw: string, level: number, meta: typeof LEVEL_META[0]): LessonPayload | null {
-  // Each section runs until the next labelled section or end of string
-  const section = (label: string) => {
-    const pattern = new RegExp(`(?:^|\\n)${label}:?\\s*([\\s\\S]+?)(?=\\n(?:EXPLANATION|CODE|TASK|HINT):?[\\s\\n]|$)`, "i");
-    return raw.match(pattern)?.[1]?.trim() ?? "";
-  };
+  // Split at each section header (EXPLANATION, CODE, TASK, HINT) wherever they appear
+  const chunks = raw.split(/\n(?=(?:EXPLANATION|CODE|TASK|HINT):?\s)/i);
+  const sections: Record<string, string> = {};
+  for (const chunk of chunks) {
+    const m = chunk.match(/^(EXPLANATION|CODE|TASK|HINT):?\s*([\s\S]*)/i);
+    if (m) sections[m[1].toUpperCase()] = m[2].trim();
+  }
+
+  const explanation = sections["EXPLANATION"] ?? "";
+  if (!explanation) return null;
 
   // Strip markdown code fences from the code block
-  const rawCode = section("CODE");
+  const rawCode = sections["CODE"] ?? "";
   const codeExample = rawCode.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/i, "").trim();
 
-  const explanation = section("EXPLANATION");
-  const task = section("TASK");
-  const hint = section("HINT");
+  // Graceful fallback for missing TASK
+  const task = sections["TASK"] || `Practice what you've learned: write a short ${meta.title.toLowerCase()} program that uses the concept from the code example above.`;
+  const hint = sections["HINT"] ?? "";
 
-  if (!explanation || !task) return null;
   return { level, totalLevels: TOTAL_LEVELS, levelTitle: meta.title, explanation, codeExample, task, hint };
 }
 
