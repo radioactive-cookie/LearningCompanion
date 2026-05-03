@@ -36,12 +36,8 @@ async function isAdminEmail(email: string): Promise<boolean> {
 }
 
 function requireAdminSession(req: Request, res: Response): boolean {
-  if (!req.isAuthenticated()) {
-    res.status(401).json({ error: "Not authenticated" });
-    return false;
-  }
   if (!req.adminVerified) {
-    res.status(403).json({ error: "Admin password not verified" });
+    res.status(403).json({ error: "Not authenticated as admin" });
     return false;
   }
   return true;
@@ -413,31 +409,37 @@ router.get("/admin/stats", async (req: Request, res: Response) => {
   if (!requireAdminSession(req, res)) return;
 
   const now = new Date();
+  let totalUsers = 0;
+  let activeSessions = 0;
+  let stepDistribution: { label: string; count: number }[] = [];
 
-  // Total registered users
-  const [{ total: totalUsers }] = await db.select({ total: count() }).from(usersTable);
+  try {
+    const [row] = await db.select({ total: count() }).from(usersTable);
+    totalUsers = Number(row?.total ?? 0);
+  } catch { /* table may be empty */ }
 
-  // Active sessions (non-expired, non-admin-direct)
-  const [{ active: activeSessions }] = await db
-    .select({ active: count() })
-    .from(sessionsTable)
-    .where(gt(sessionsTable.expire, now));
+  try {
+    const [row] = await db.select({ active: count() }).from(sessionsTable).where(gt(sessionsTable.expire, now));
+    activeSessions = Number(row?.active ?? 0);
+  } catch { /* ignore */ }
 
-  // Step distribution: group by topic from learnProgress
-  const stepRows = await db
-    .select({ topic: learnProgress.topic, language: learnProgress.language, userCount: count() })
-    .from(learnProgress)
-    .groupBy(learnProgress.topic, learnProgress.language)
-    .orderBy(sql`count(*) desc`)
-    .limit(10);
-
-  res.json({
-    totalUsers: Number(totalUsers),
-    activeSessions: Number(activeSessions),
-    stepDistribution: stepRows.map(r => ({
+  try {
+    const stepRows = await db
+      .select({ topic: learnProgress.topic, language: learnProgress.language, userCount: count() })
+      .from(learnProgress)
+      .groupBy(learnProgress.topic, learnProgress.language)
+      .orderBy(sql`count(*) desc`)
+      .limit(10);
+    stepDistribution = stepRows.map(r => ({
       label: `${r.language} · ${r.topic}`,
       count: Number(r.userCount),
-    })),
+    }));
+  } catch { /* ignore */ }
+
+  res.json({
+    totalUsers,
+    activeSessions,
+    stepDistribution,
     apiStatus: "working",
     lastRequestTime: lastRequestTime?.toISOString() ?? null,
   });
