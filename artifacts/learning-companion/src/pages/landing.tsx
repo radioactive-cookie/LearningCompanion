@@ -55,8 +55,8 @@ export function Landing() {
       <header className="sticky top-0 z-20 border-b border-border/40 bg-background/80 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="bg-white p-1.5 rounded-lg border border-border/50 shadow-sm">
-              <img src={brandIcon} alt="Companion" className="w-4 h-4 object-contain" />
+            <div className="bg-zinc-900 p-1.5 rounded-lg border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_0_14px_rgba(0,0,0,0.18)] hover:brightness-110 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.07),0_0_18px_rgba(0,0,0,0.24)] transition-all">
+              <img src={brandIcon} alt="Companion" className="w-4 h-4 object-contain brightness-110" />
             </div>
             <span className="font-semibold text-base tracking-tight text-foreground">Companion</span>
           </div>

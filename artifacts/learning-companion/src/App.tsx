@@ -243,8 +243,8 @@ function Layout({ children }: { children: React.ReactNode }) {
         <div className="p-6">
           <Link href="/">
             <div className="flex items-center gap-3 cursor-pointer text-sidebar-foreground group" data-testid="link-home">
-              <div className="bg-white p-1.5 rounded-lg border border-border/50 shadow-sm group-hover:shadow transition-shadow">
-                <img src={brandIcon} alt="Companion" className="w-5 h-5 object-contain" />
+              <div className="bg-zinc-900 p-1.5 rounded-lg border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_0_14px_rgba(0,0,0,0.18)] group-hover:brightness-110 group-hover:shadow-[0_0_0_1px_rgba(255,255,255,0.07),0_0_18px_rgba(0,0,0,0.24)] transition-all">
+                <img src={brandIcon} alt="Companion" className="w-5 h-5 object-contain brightness-110" />
               </div>
               <span className="font-semibold tracking-tight text-lg">Companion</span>
             </div>
