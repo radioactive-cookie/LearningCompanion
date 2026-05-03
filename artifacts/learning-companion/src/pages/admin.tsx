@@ -28,10 +28,9 @@ async function apiFetch(path: string, options?: RequestInit) {
 }
 
 // ── Step indicators ────────────────────────────────────────────────────────────
-function Steps({ step }: { step: 1 | 2 | 3 }) {
+function Steps({ step }: { step: 1 | 2 }) {
   const steps = [
     { label: "Login", icon: UserCheck },
-    { label: "Verify", icon: Key },
     { label: "Dashboard", icon: Shield },
   ];
   return (
@@ -47,7 +46,7 @@ function Steps({ step }: { step: 1 | 2 | 3 }) {
               <Icon className="w-3 h-3" />
               {s.label}
             </div>
-            {i < 2 && <div className={`w-8 h-px ${step > n ? "bg-emerald-500/40" : "bg-white/10"}`} />}
+            {i < 1 && <div className={`w-8 h-px ${step > n ? "bg-emerald-500/40" : "bg-white/10"}`} />}
           </div>
         );
       })}
@@ -426,7 +425,8 @@ export function AdminPage() {
 
   useEffect(() => { fetchStatus(); }, []);
 
-  const step: 1 | 2 | 3 = !status?.isAuthenticated ? 1 : !status?.isAdminVerified ? 2 : 3;
+  // Authenticated + admin email → step 2 (dashboard). Not authenticated → step 1 (login).
+  const step: 1 | 2 = !status?.isAuthenticated || !status?.isAdminEmail ? 1 : 2;
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#09090b] px-4 relative overflow-hidden">
@@ -452,9 +452,9 @@ export function AdminPage() {
             <Steps step={step} />
 
             <div className="bg-[#131314] border border-white/[0.08] rounded-2xl p-7 shadow-2xl shadow-black/60">
-              {step === 1 && <LoginStep />}
+              {step === 1 && !status?.isAuthenticated && <LoginStep />}
 
-              {step === 2 && status?.isAdminEmail === false && (
+              {step === 1 && status?.isAuthenticated && !status?.isAdminEmail && (
                 <div className="text-center py-4">
                   <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
                     <AlertTriangle className="w-6 h-6 text-red-400" />
@@ -472,15 +472,7 @@ export function AdminPage() {
                 </div>
               )}
 
-              {step === 2 && status?.isAdminEmail === true && (
-                <PasswordStep
-                  displayName={status.displayName ?? status.email ?? "Admin"}
-                  email={status.email ?? ""}
-                  onVerified={fetchStatus}
-                />
-              )}
-
-              {step === 3 && (
+              {step === 2 && (
                 <Dashboard
                   email={status!.email!}
                   displayName={status!.displayName!}

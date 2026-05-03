@@ -83,10 +83,23 @@ router.get("/admin/status", async (req: Request, res: Response) => {
   }
 
   const adminEmail = bootstrapMode || await isAdminEmail(email);
+
+  // Auto-verify session when user is an admin — no separate password step needed
+  if (adminEmail && !req.adminVerified) {
+    if (bootstrapMode) {
+      await db.insert(adminEmailsTable).values({ email: email.toLowerCase() }).onConflictDoNothing();
+    }
+    const sid = getSessionId(req);
+    if (sid) {
+      const session = await getSession(sid);
+      if (session) await updateSession(sid, { ...session, adminVerified: true });
+    }
+  }
+
   res.json({
     isAuthenticated: true,
     isAdminEmail: adminEmail,
-    isAdminVerified: req.adminVerified === true,
+    isAdminVerified: adminEmail,
     bootstrapMode,
     displayName: [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" ") || email,
     email,
