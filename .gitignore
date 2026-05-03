@@ -53,7 +53,6 @@ groq API key.txt
 *.jks
 *.keystore
 *.ppk
-.vscode/tasks.json
 
 # System Files
 .DS_Store
