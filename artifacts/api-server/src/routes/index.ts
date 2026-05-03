@@ -6,10 +6,11 @@ import projectRouter from "./project";
 import learnRouter from "./learn";
 import learnProgressRouter from "./learnProgress";
 import certificatesRouter from "./certificates";
-import adminRouter, { adminSessionMiddleware } from "./admin";
+import adminRouter, { adminSessionMiddleware, updateLastRequestTime } from "./admin";
 
 const router: IRouter = Router();
 
+router.use((_req, _res, next) => { updateLastRequestTime(); next(); });
 router.use(healthRouter);
 router.use(authRouter);
 router.use(adminSessionMiddleware);

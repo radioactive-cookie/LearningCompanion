@@ -1,7 +1,11 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import bcrypt from "bcryptjs";
-import { db, adminEmailsTable, adminConfigTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, adminEmailsTable, adminConfigTable, usersTable, sessionsTable, learnProgress } from "@workspace/db";
+import { eq, gt, count, sql } from "drizzle-orm";
+
+// Track last API request time globally
+let lastRequestTime: Date | null = null;
+export function updateLastRequestTime() { lastRequestTime = new Date(); }
 import {
   getSessionId,
   getSession,
@@ -376,9 +380,16 @@ router.post("/admin/add", async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/admin/remove — remove an admin email
+// DELETE /api/admin/remove — remove an admin email (superadmin only)
+const SUPERADMIN = "pritammunshi2005@gmail.com";
 router.delete("/admin/remove", async (req: Request, res: Response) => {
   if (!requireAdminSession(req, res)) return;
+
+  const callerEmail = req.user?.email?.toLowerCase() ?? "";
+  if (callerEmail !== SUPERADMIN) {
+    res.status(403).json({ error: "Only the superadmin can remove admins" });
+    return;
+  }
 
   const { email } = req.body;
   if (!email || typeof email !== "string") {
@@ -388,14 +399,48 @@ router.delete("/admin/remove", async (req: Request, res: Response) => {
 
   const normalized = email.toLowerCase().trim();
 
-  // Prevent removing self
-  if (normalized === req.user?.email?.toLowerCase()) {
+  if (normalized === callerEmail) {
     res.status(400).json({ error: "Cannot remove your own admin access" });
     return;
   }
 
   await db.delete(adminEmailsTable).where(eq(adminEmailsTable.email, normalized));
   res.json({ success: true });
+});
+
+// GET /api/admin/stats — user activity + system health data
+router.get("/admin/stats", async (req: Request, res: Response) => {
+  if (!requireAdminSession(req, res)) return;
+
+  const now = new Date();
+
+  // Total registered users
+  const [{ total: totalUsers }] = await db.select({ total: count() }).from(usersTable);
+
+  // Active sessions (non-expired, non-admin-direct)
+  const [{ active: activeSessions }] = await db
+    .select({ active: count() })
+    .from(sessionsTable)
+    .where(gt(sessionsTable.expire, now));
+
+  // Step distribution: group by topic from learnProgress
+  const stepRows = await db
+    .select({ topic: learnProgress.topic, language: learnProgress.language, userCount: count() })
+    .from(learnProgress)
+    .groupBy(learnProgress.topic, learnProgress.language)
+    .orderBy(sql`count(*) desc`)
+    .limit(10);
+
+  res.json({
+    totalUsers: Number(totalUsers),
+    activeSessions: Number(activeSessions),
+    stepDistribution: stepRows.map(r => ({
+      label: `${r.language} · ${r.topic}`,
+      count: Number(r.userCount),
+    })),
+    apiStatus: "working",
+    lastRequestTime: lastRequestTime?.toISOString() ?? null,
+  });
 });
 
 export default router;
