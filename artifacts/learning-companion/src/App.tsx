@@ -19,7 +19,7 @@ import NotFound from "@/pages/not-found";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { useGetAiUsage, getGetAiUsageQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@workspace/replit-auth-web";
-import brandIcon from "@assets/image_1777788437108.png";
+import brandIcon from "@assets/artificial-intelligence_1777788302253.png";
 
 // ---------------------------------------------------------------------------
 // AI Usage Indicator
