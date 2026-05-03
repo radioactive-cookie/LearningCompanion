@@ -156,7 +156,15 @@ router.post("/admin/verify-password", async (req: Request, res: Response) => {
   }
 
   const email = req.user?.email;
-  if (!email || !(await isAdminEmail(email))) {
+  if (!email) {
+    res.status(400).json({ error: "User has no email" });
+    return;
+  }
+
+  // Allow in bootstrap mode (0 admins) — email will be registered by setup-password
+  const adminCount = await getAdminCount();
+  const bootstrapMode = adminCount === 0;
+  if (!bootstrapMode && !(await isAdminEmail(email))) {
     res.status(403).json({ error: "Not an admin" });
     return;
   }
