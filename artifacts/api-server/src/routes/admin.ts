@@ -228,12 +228,6 @@ router.post("/admin/skip-verify", async (req: Request, res: Response) => {
     return;
   }
 
-  const hash = await getPasswordHash();
-  if (hash) {
-    res.status(400).json({ error: "Password is configured — cannot skip verification" });
-    return;
-  }
-
   // In bootstrap mode with no password set, register this user as first admin
   if (bootstrapMode) {
     await db.insert(adminEmailsTable).values({ email: email.toLowerCase() }).onConflictDoNothing();
