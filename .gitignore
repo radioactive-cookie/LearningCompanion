@@ -12,12 +12,12 @@ out-tsc
 node_modules
 
 # environment files
-/backend/.env
-/backend/.env.*
-!/backend/.env.example
-/frontend/.env
-/frontend/.env.*
-!/frontend/.env.example
+**/.env
+**/.env.*
+**/.envrc
+!**/.env.example
+!**/.env.sample
+!**/.env.template
 
 # IDEs and editors
 /.idea
@@ -31,7 +31,6 @@ node_modules
 # IDE - VSCode
 .vscode/*
 !.vscode/settings.json
-!.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 
@@ -45,6 +44,15 @@ yarn-error.log
 testem.log
 /typings
 groq API key.txt
+
+# secret keys and credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.ppk
 
 # System Files
 .DS_Store
