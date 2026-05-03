@@ -19,7 +19,7 @@ run = "pnpm --filter @workspace/learning-companion run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/learning-companion", "run", "build" ]
-publicDir = "artifacts/learning-companion/dist/public"
+publicDir = "artifacts/frontend/dist/public"
 serve = "static"
 
 [[services.production.rewrites]]
