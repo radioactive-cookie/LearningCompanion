@@ -12,6 +12,7 @@ import { Learn } from "@/pages/learn";
 import { Landing } from "@/pages/landing";
 import { Progress } from "@/pages/progress";
 import { CertificatePage } from "@/pages/certificate";
+import { SignIn } from "@/pages/sign-in";
 import NotFound from "@/pages/not-found";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { useGetAiUsage, getGetAiUsageQueryKey } from "@workspace/api-client-react";
@@ -161,7 +162,8 @@ const queryClient = new QueryClient({
 // User panel in sidebar
 // ---------------------------------------------------------------------------
 function UserPanel() {
-  const { user, isLoading, isAuthenticated, login, logout } = useAuth();
+  const { user, isLoading, isAuthenticated, logout } = useAuth();
+  const [, setLocation] = useLocation();
 
   if (isLoading) {
     return (
@@ -178,7 +180,7 @@ function UserPanel() {
           variant="outline"
           size="sm"
           className="w-full justify-start gap-2 text-sidebar-foreground/80 border-sidebar-border hover:bg-sidebar-accent"
-          onClick={login}
+          onClick={() => setLocation("/sign-in")}
           data-testid="btn-login"
         >
           <LogIn className="w-4 h-4" />
@@ -316,6 +318,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/sign-in" component={SignIn} />
       <Route path="/chat">
         <Layout><Chat /></Layout>
       </Route>

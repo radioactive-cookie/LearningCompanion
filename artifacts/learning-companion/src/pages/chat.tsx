@@ -33,7 +33,7 @@ import {
 } from "@workspace/api-client-react";
 import type { ChatMessage, Topic } from "@workspace/api-client-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useSearch } from "wouter";
+import { useSearch, useLocation } from "wouter";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -279,6 +279,7 @@ function GuestLimitPrompt({ login, onDismiss }: { login: () => void; onDismiss: 
 
 export function Chat() {
   const search = useSearch();
+  const [, setLocation] = useLocation();
   const params = new URLSearchParams(search);
   const resumeSessionId = params.get("resume") ?? undefined;
 
@@ -487,7 +488,7 @@ export function Chat() {
 
       {/* ── Guest limit prompt (after 5 messages without login) ── */}
       {showGuestLimit && (
-        <GuestLimitPrompt login={login} onDismiss={() => setShowGuestLimit(false)} />
+        <GuestLimitPrompt login={() => setLocation("/sign-in")} onDismiss={() => setShowGuestLimit(false)} />
       )}
 
       {/* ── Name prompt overlay (guest first visit) ── */}
